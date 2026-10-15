@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="520" viewBox="0 0 1200 520" role="img" aria-labelledby="title desc">
+  <title id="title">Fluxo de trabalho do PS4Tools</title>
+  <desc id="desc">PS4Tools conecta-se a um ou dois consoles PS4 para gerenciar saves e troféus.</desc>
+  <defs><linearGradient id="bg" x1="0" x2="1" y1="0" y2="1"><stop stop-color="#101827"/><stop offset="1" stop-color="#182d4d"/></linearGradient><filter id="shadow"><feDropShadow dx="0" dy="5" stdDeviation="6" flood-opacity=".25"/></filter></defs>
+  <rect width="1200" height="520" rx="24" fill="url(#bg)"/>
+  <text x="60" y="70" fill="#fff" font-family="Segoe UI,Arial" font-size="34" font-weight="700">PS4Tools</text>
+  <text x="60" y="105" fill="#b8c9e5" font-family="Segoe UI,Arial" font-size="19">Gerencie saves e troféus pela rede local</text>
+  <g filter="url(#shadow)"><rect x="60" y="165" width="270" height="230" rx="18" fill="#fff"/><rect x="465" y="145" width="270" height="270" rx="18" fill="#fff"/><rect x="870" y="165" width="270" height="230" rx="18" fill="#fff"/></g>
+  <g font-family="Segoe UI,Arial" text-anchor="middle"><text x="195" y="215" fill="#17243a" font-size="25" font-weight="700">PS4 de origem</text><text x="195" y="255" fill="#52627a" font-size="17">Saves • usuários</text><text x="195" y="290" fill="#52627a" font-size="17">Troféus</text><text x="195" y="345" fill="#2f6fed" font-size="17" font-weight="600">FTP :2121</text><text x="600" y="205" fill="#17243a" font-size="25" font-weight="700">PS4Tools</text><text x="600" y="245" fill="#52627a" font-size="17">Seleciona, copia, importa</text><text x="600" y="277" fill="#52627a" font-size="17">faz backup e sincroniza</text><text x="600" y="335" fill="#7d4dde" font-size="17" font-weight="600">Save Agent / Apollo</text><text x="1005" y="215" fill="#17243a" font-size="25" font-weight="700">PS4 de destino</text><text x="1005" y="255" fill="#52627a" font-size="17">Usuário escolhido</text><text x="1005" y="290" fill="#52627a" font-size="17">Saves e troféus</text><text x="1005" y="345" fill="#2f6fed" font-size="17" font-weight="600">FTP :2121</text></g>
+  <g stroke="#78a7ff" stroke-width="5" fill="none" stroke-linecap="round"><path d="M335 280H450"/><path d="M750 280H865"/></g><g fill="#78a7ff"><path d="m450 280-18-12v24z"/><path d="m865 280-18-12v24z"/></g>
+  <text x="600" y="475" fill="#9fb5d8" text-anchor="middle" font-family="Segoe UI,Arial" font-size="16">Backup local • sincronização seletiva • operação assíncrona com progresso</text>
+</svg>
