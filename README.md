@@ -72,7 +72,7 @@ As operações de troféus trabalham com o banco `trophy_local.db` do usuário. 
 Na página de releases do GitHub, baixe o pacote para Windows e extraia-o mantendo a estrutura de pastas. O executável distribuído pelo projeto é:
 
 ```text
-Win32/Debug/PS4Tools/PS4Tools.exe
+PS4Tools/PS4Tools.exe
 ```
 
 Execute `PS4Tools.exe` como usuário normal. Mantenha na mesma pasta os componentes e payloads distribuídos com o pacote. O programa salva suas preferências de IP, idioma e modo de sincronização localmente.

@@ -72,7 +72,7 @@ Trophy operations work with the user's `trophy_local.db` database. Always create
 Download the Windows package from the GitHub Releases page and extract it while preserving the folder structure. The distributed executable is:
 
 ```text
-Win32/Debug/PS4Tools/PS4Tools.exe
+PS4Tools/PS4Tools.exe
 ```
 
 Run `PS4Tools.exe` as a normal user. Keep the components and payloads distributed with the package in their expected folders. The application stores IP, language and synchronization-mode preferences locally.
