@@ -1,5 +1,7 @@
 # PS4Tools
 
+**Português (atual) | [English](README.en.md)**
+
 <p align="center">
   <img src="components/icons8-playstation-windows-11-color/icons8-playstation-100.png" alt="Ícone do PS4Tools" width="96">
 </p>
