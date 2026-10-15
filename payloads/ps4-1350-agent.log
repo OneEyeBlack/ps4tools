@@ -1,0 +1,1516 @@
+PS4SAVEAGENT 0.1 starting
+PS4SAVEAGENT 0.1 listening
+PS4SAVEAGENT 0.3 starting on port 8084
+PS4SAVEAGENT 0.3 listening on 0.0.0.0:8084
+sync begin CUSA00694/-JOURNEY- 11e3daed -> 11e3daee
+creating destination pfs, source size=10485760
+mount source /data/ps4-save-agent/1791916041/src_sdimg
+PS4SAVEAGENT 0.3 stopped
+PS4SAVEAGENT 0.3 starting on port 8084
+PS4SAVEAGENT 0.3 listening on 0.0.0.0:8084
+sync begin CUSA00694/-JOURNEY- 11e3daed -> 11e3daee
+creating destination pfs, source size=10485760
+mount source /data/ps4-save-agent/1791916105/sdimg_-JOURNEY-
+PS4SAVEAGENT 0.3 stopped
+PS4SAVEAGENT 0.3 starting on port 8084
+PS4SAVEAGENT 0.3 listening on 0.0.0.0:8084
+sync begin CUSA00694/-JOURNEY- 11e3daed -> 11e3daee
+creating destination pfs, source size=10485760
+mount source /data/ps4-save-agent/1791916180/sdimg_-JOURNEY-
+PS4SAVEAGENT 0.3 stopped
+PS4SAVEAGENT 0.3 starting on port 8084
+PS4SAVEAGENT 0.3 listening on 0.0.0.0:8084
+sync begin CUSA00694/-JOURNEY- 11e3daed -> 11e3daee
+creating destination pfs, source size=10485760
+mount source /data/ps4-save-agent/1791916232/sdimg_-JOURNEY-
+mount copied source failed 0x80020060; trying original /user/home/11e3daed/savedata/CUSA00694/sdimg_-JOURNEY-
+PS4SAVEAGENT 0.3 stopped
+PS4SAVEAGENT 0.3 starting on port 8084
+PS4SAVEAGENT 0.3 listening on 0.0.0.0:8084
+device mknod failed /dev/pfsctldev errno=17
+device mknod failed /dev/lvdctl errno=17
+device mknod failed /dev/sbl_srv errno=17
+vsh mount environment initialized
+sync begin CUSA00694/-JOURNEY- 11e3daed -> 11e3daee
+creating destination pfs, source size=10485760
+mount source /data/ps4-save-agent/1791916734/sdimg_-JOURNEY-
+mount copied source failed 0x80020060; trying original /user/home/11e3daed/savedata/CUSA00694/sdimg_-JOURNEY-
+PS4SAVEAGENT 0.3 stopped
+PS4SAVEAGENT 0.3 starting on port 8084
+PS4SAVEAGENT 0.3 listening on 0.0.0.0:8084
+device mknod failed /dev/pfsctldev errno=17
+device mknod failed /dev/lvdctl errno=17
+device mknod failed /dev/sbl_srv errno=17
+vsh mount environment initialized
+sync begin CUSA00694/-JOURNEY- 11e3daed -> 11e3daee
+creating destination pfs, source size=10485760
+mount source /data/ps4-save-agent/1791916852/sdimg_-JOURNEY-
+mount destination /data/ps4-save-agent/1791916852/dst_sdimg_-JOURNEY-
+param.sfo account id not found for user 11e3daee; leaving source account id
+savedata.db update failed: table savedata has no column named system_blocks
+savedata.db update returned -3
+sync complete CUSA00694/-JOURNEY- -> 11e3daee
+PS4SAVEAGENT 0.3 stopped
+PS4SAVEAGENT 0.3 starting on port 8084
+PS4SAVEAGENT 0.3 listening on 0.0.0.0:8084
+device mknod failed /dev/pfsctldev errno=17
+device mknod failed /dev/lvdctl errno=17
+device mknod failed /dev/sbl_srv errno=17
+vsh mount environment initialized
+sync begin CUSA00694/-JOURNEY- 11e3daed -> 11e3daee
+creating destination pfs, source size=10485760
+mount source /data/ps4-save-agent/1791916913/sdimg_-JOURNEY-
+mount destination /data/ps4-save-agent/1791916913/dst_sdimg_-JOURNEY-
+param.sfo account id not found for user 11e3daee; leaving source account id
+savedata.db inserted for CUSA00694/-JOURNEY- user 11e3daee
+sync complete CUSA00694/-JOURNEY- -> 11e3daee
+PS4SAVEAGENT 0.3 stopped
+PS4SAVEAGENT 0.3 starting on port 8084
+PS4SAVEAGENT 0.3 listening on 0.0.0.0:8084
+device mknod failed /dev/pfsctldev errno=17
+device mknod failed /dev/lvdctl errno=17
+device mknod failed /dev/sbl_srv errno=17
+vsh mount environment initialized
+sync begin CUSA00755/slot000 11e3daed -> 11e3daee
+creating destination pfs, source size=10485760
+mount source /data/ps4-save-agent/1791917143/sdimg_slot000
+mount destination /data/ps4-save-agent/1791917143/dst_sdimg_slot000
+param.sfo patched with account id 0 for 11e3daee
+savedata.db inserted for CUSA00755/slot000 user 11e3daee
+sync complete CUSA00755/slot000 -> 11e3daee
+PS4SAVEAGENT 0.3 starting on port 8084
+PS4SAVEAGENT 0.3 listening on 0.0.0.0:8084
+device mknod failed /dev/pfsctldev errno=17
+device mknod failed /dev/lvdctl errno=17
+device mknod failed /dev/sbl_srv errno=17
+vsh mount environment initialized
+sync begin CUSA11260/MANUALSAVE2 11e3daed -> 11e3daee
+creating destination pfs, source size=12779520
+mount source /data/ps4-save-agent/1791919905/sdimg_MANUALSAVE2
+mount destination /data/ps4-save-agent/1791919905/dst_sdimg_MANUALSAVE2
+param.sfo patched with account id 0 for 11e3daee
+savedata.db inserted for CUSA11260/MANUALSAVE2 user 11e3daee
+sync complete CUSA11260/MANUALSAVE2 -> 11e3daee
+PS4SAVEAGENT 0.3 starting on port 8084
+PS4SAVEAGENT 0.3 listening on 0.0.0.0:8084
+device mknod failed /dev/pfsctldev errno=17
+device mknod failed /dev/lvdctl errno=17
+device mknod failed /dev/sbl_srv errno=17
+vsh mount environment initialized
+sync begin CUSA00694/-JOURNEY- 11e3daed -> 11e3daee
+creating destination pfs, source size=10485760
+mount source /data/ps4-save-agent/1791920411/sdimg_-JOURNEY-
+mount destination /data/ps4-save-agent/1791920411/dst_sdimg_-JOURNEY-
+param.sfo patched with account id 0 for 11e3daee
+savedata.db updated for CUSA00694/-JOURNEY- user 11e3daee
+sync complete CUSA00694/-JOURNEY- -> 11e3daee
+work files kept for stability: /data/ps4-save-agent/1791920411
+sync request response sent status=200
+PS4SAVEAGENT 0.3 starting on port 8084
+PS4SAVEAGENT 0.3 listening on 0.0.0.0:8084
+device mknod failed /dev/pfsctldev errno=17
+device mknod failed /dev/lvdctl errno=17
+device mknod failed /dev/sbl_srv errno=17
+vsh mount environment initialized
+sync begin CUSA00694/-JOURNEY- 11e3daed -> 11e3daee
+creating destination pfs, source size=10485760
+mount source /data/ps4-save-agent/1791920645/sdimg_-JOURNEY-
+mount destination /data/ps4-save-agent/1791920645/dst_sdimg_-JOURNEY-
+param.sfo patched with account id 0 for 11e3daee
+savedata.db updated for CUSA00694/-JOURNEY- user 11e3daee
+sync complete CUSA00694/-JOURNEY- -> 11e3daee
+sync request response sent status=500
+device mknod failed /dev/pfsctldev errno=17
+device mknod failed /dev/lvdctl errno=17
+device mknod failed /dev/sbl_srv errno=17
+vsh mount environment initialized
+sync begin CUSA00755/slot000 11e3daed -> 11e3daee
+creating destination pfs, source size=10485760
+mount source /data/ps4-save-agent/1791920649/sdimg_slot000
+mount destination /data/ps4-save-agent/1791920649/dst_sdimg_slot000
+param.sfo patched with account id 0 for 11e3daee
+savedata.db updated for CUSA00755/slot000 user 11e3daee
+sync complete CUSA00755/slot000 -> 11e3daee
+sync request response sent status=500
+sync request response sent status=400
+PS4SAVEAGENT 0.3 stopped
+PS4SAVEAGENT 0.3 starting on port 8084
+PS4SAVEAGENT 0.3 listening on 0.0.0.0:8084
+device mknod failed /dev/pfsctldev errno=17
+device mknod failed /dev/lvdctl errno=17
+device mknod failed /dev/sbl_srv errno=17
+vsh mount environment initialized
+sync begin CUSA00694/-JOURNEY- 11e3daed -> 11e3daee
+creating destination pfs, source size=10485760
+mount source /data/ps4-save-agent/1791920826/sdimg_-JOURNEY-
+mount destination /data/ps4-save-agent/1791920826/dst_sdimg_-JOURNEY-
+param.sfo patched with account id 0 for 11e3daee
+savedata.db updated for CUSA00694/-JOURNEY- user 11e3daee
+sync complete CUSA00694/-JOURNEY- -> 11e3daee
+sync request response sent status=200
+device mknod failed /dev/pfsctldev errno=17
+device mknod failed /dev/lvdctl errno=17
+device mknod failed /dev/sbl_srv errno=17
+vsh mount environment initialized
+sync begin CUSA00755/slot000 11e3daed -> 11e3daee
+creating destination pfs, source size=10485760
+mount source /data/ps4-save-agent/1791920830/sdimg_slot000
+mount destination /data/ps4-save-agent/1791920830/dst_sdimg_slot000
+param.sfo patched with account id 0 for 11e3daee
+savedata.db updated for CUSA00755/slot000 user 11e3daee
+sync complete CUSA00755/slot000 -> 11e3daee
+sync request response sent status=200
+device mknod failed /dev/pfsctldev errno=17
+device mknod failed /dev/lvdctl errno=17
+device mknod failed /dev/sbl_srv errno=17
+vsh mount environment initialized
+sync begin CUSA00960/localstorage.aes 11e3daed -> 11e3daee
+creating destination pfs, source size=3145728
+mount source /data/ps4-save-agent/1791920833/sdimg_localstorage.aes
+mount destination /data/ps4-save-agent/1791920833/dst_sdimg_localstorage.aes
+param.sfo patched with account id 0 for 11e3daee
+savedata.db inserted for CUSA00960/localstorage.aes user 11e3daee
+sync complete CUSA00960/localstorage.aes -> 11e3daee
+sync request response sent status=200
+device mknod failed /dev/pfsctldev errno=17
+device mknod failed /dev/lvdctl errno=17
+device mknod failed /dev/sbl_srv errno=17
+vsh mount environment initialized
+sync begin CUSA00694/-JOURNEY- 11e3daed -> 11e3daee
+creating destination pfs, source size=10485760
+mount source /data/ps4-save-agent/1791920908/sdimg_-JOURNEY-
+mount destination /data/ps4-save-agent/1791920908/dst_sdimg_-JOURNEY-
+param.sfo patched with account id 0 for 11e3daee
+savedata.db updated for CUSA00694/-JOURNEY- user 11e3daee
+sync complete CUSA00694/-JOURNEY- -> 11e3daee
+sync request response sent status=200
+device mknod failed /dev/pfsctldev errno=17
+device mknod failed /dev/lvdctl errno=17
+device mknod failed /dev/sbl_srv errno=17
+vsh mount environment initialized
+sync begin CUSA00755/slot000 11e3daed -> 11e3daee
+creating destination pfs, source size=10485760
+mount source /data/ps4-save-agent/1791920911/sdimg_slot000
+mount destination /data/ps4-save-agent/1791920911/dst_sdimg_slot000
+param.sfo patched with account id 0 for 11e3daee
+savedata.db updated for CUSA00755/slot000 user 11e3daee
+sync complete CUSA00755/slot000 -> 11e3daee
+sync request response sent status=200
+device mknod failed /dev/pfsctldev errno=17
+device mknod failed /dev/lvdctl errno=17
+device mknod failed /dev/sbl_srv errno=17
+vsh mount environment initialized
+sync begin CUSA00960/localstorage.aes 11e3daed -> 11e3daee
+creating destination pfs, source size=3145728
+mount source /data/ps4-save-agent/1791920915/sdimg_localstorage.aes
+mount destination /data/ps4-save-agent/1791920915/dst_sdimg_localstorage.aes
+param.sfo patched with account id 0 for 11e3daee
+savedata.db updated for CUSA00960/localstorage.aes user 11e3daee
+sync complete CUSA00960/localstorage.aes -> 11e3daee
+sync request response sent status=200
+device mknod failed /dev/pfsctldev errno=17
+device mknod failed /dev/lvdctl errno=17
+device mknod failed /dev/sbl_srv errno=17
+vsh mount environment initialized
+sync begin CUSA11260/MANUALSAVE1 11e3daed -> 11e3daee
+creating destination pfs, source size=12779520
+mount source /data/ps4-save-agent/1791921023/sdimg_MANUALSAVE1
+mount destination /data/ps4-save-agent/1791921023/dst_sdimg_MANUALSAVE1
+param.sfo patched with account id 0 for 11e3daee
+savedata.db inserted for CUSA11260/MANUALSAVE1 user 11e3daee
+sync complete CUSA11260/MANUALSAVE1 -> 11e3daee
+sync request response sent status=200
+device mknod failed /dev/pfsctldev errno=17
+device mknod failed /dev/lvdctl errno=17
+device mknod failed /dev/sbl_srv errno=17
+vsh mount environment initialized
+sync begin CUSA11260/PROFILE 11e3daed -> 11e3daee
+creating destination pfs, source size=3145728
+mount source /data/ps4-save-agent/1791921025/sdimg_PROFILE
+mount destination /data/ps4-save-agent/1791921025/dst_sdimg_PROFILE
+param.sfo patched with account id 0 for 11e3daee
+savedata.db inserted for CUSA11260/PROFILE user 11e3daee
+sync complete CUSA11260/PROFILE -> 11e3daee
+sync request response sent status=200
+PS4SAVEAGENT 0.3 stopped
+PS4SAVEAGENT 0.4 starting on port 8084
+PS4SAVEAGENT 0.4 listening on 0.0.0.0:8084
+device mknod failed /dev/pfsctldev errno=17
+device mknod failed /dev/lvdctl errno=17
+device mknod failed /dev/sbl_srv errno=17
+vsh mount environment initialized
+sync begin CUSA11260/MANUALSAVE2 11e3daed -> 11e3daee
+creating destination pfs, source size=12779520
+mount source /data/ps4-save-agent/1791921583/sdimg_MANUALSAVE2
+mount destination /data/ps4-save-agent/1791921583/dst_sdimg_MANUALSAVE2
+PS4SAVEAGENT 0.4 starting on port 8084
+PS4SAVEAGENT 0.4 listening on 0.0.0.0:8084
+device mknod failed /dev/pfsctldev errno=17
+device mknod failed /dev/lvdctl errno=17
+device mknod failed /dev/sbl_srv errno=17
+vsh mount environment initialized
+sync begin CUSA00755/slot000 11e3daed -> 11e3daee
+creating destination pfs, source size=10485760
+mount source /data/ps4-save-agent/1791922014/sdimg_slot000
+mount destination /data/ps4-save-agent/1791922014/dst_sdimg_slot000
+PS4SAVEAGENT 0.4 starting on port 8084
+PS4SAVEAGENT 0.4 listening on 0.0.0.0:8084
+device mknod failed /dev/pfsctldev errno=17
+device mknod failed /dev/lvdctl errno=17
+device mknod failed /dev/sbl_srv errno=17
+vsh mount environment initialized
+sync begin CUSA00755/slot000 11e3daed -> 11e3daee
+creating destination pfs, source size=10485760
+mount source /data/ps4-save-agent/1791922985/sdimg_slot000
+mount destination /data/ps4-save-agent/1791922985/dst_sdimg_slot000
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+param.sfo patched aid=0 user_id=11e3daee for 11e3daee
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+savedata.db inserted for CUSA00755/slot000 user 11e3daee
+sync complete CUSA00755/slot000 -> 11e3daee
+sync request response sent status=200
+PS4SAVEAGENT 0.4 stopped
+PS4SAVEAGENT 0.4 starting on port 8084
+PS4SAVEAGENT 0.4 listening on 0.0.0.0:8084
+device mknod failed /dev/pfsctldev errno=17
+device mknod failed /dev/lvdctl errno=17
+device mknod failed /dev/sbl_srv errno=17
+vsh mount environment initialized
+sync begin CUSA00755/slot000 11e3daed -> 11e3daee
+creating destination pfs, source size=10485760
+mount source /data/ps4-save-agent/1791923086/sdimg_slot000
+mount destination /data/ps4-save-agent/1791923086/dst_sdimg_slot000
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+could not get account id for 11e3daee
+sync request response sent status=200
+PS4SAVEAGENT 0.4 stopped
+PS4SAVEAGENT 0.5 starting on port 8084
+PS4SAVEAGENT 0.5 listening on 0.0.0.0:8084
+device mknod failed /dev/pfsctldev errno=17
+device mknod failed /dev/lvdctl errno=17
+device mknod failed /dev/sbl_srv errno=17
+vsh mount environment initialized
+sync begin CUSA00755/slot000 11e3daed -> 11e3daee
+creating destination pfs, source size=10485760
+mount source /data/ps4-save-agent/1791923222/sdimg_slot000
+mount destination /data/ps4-save-agent/1791923222/dst_sdimg_slot000
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+could not get account id for 11e3daee
+sync request response sent status=200
+PS4SAVEAGENT 0.5 stopped
+PS4SAVEAGENT 0.5 starting on port 8084
+PS4SAVEAGENT 0.5 listening on 0.0.0.0:8084
+device mknod failed /dev/pfsctldev errno=17
+device mknod failed /dev/lvdctl errno=17
+device mknod failed /dev/sbl_srv errno=17
+vsh mount environment initialized
+sync begin CUSA00755/slot000 11e3daed -> 11e3daee
+creating destination pfs, source size=10485760
+mount source /data/ps4-save-agent/1791923328/sdimg_slot000
+mount destination /data/ps4-save-agent/1791923328/dst_sdimg_slot000
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+could not get account id for 11e3daee
+PS4SAVEAGENT 0.5 starting on port 8084
+PS4SAVEAGENT 0.5 listening on 0.0.0.0:8084
+device mknod failed /dev/pfsctldev errno=17
+device mknod failed /dev/lvdctl errno=17
+device mknod failed /dev/sbl_srv errno=17
+vsh mount environment initialized
+sync begin CUSA00755/slot000 11e3daed -> 11e3daee
+creating destination pfs, source size=10485760
+mount source /data/ps4-save-agent/1791923404/sdimg_slot000
+mount destination /data/ps4-save-agent/1791923404/dst_sdimg_slot000
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+could not get account id for 11e3daee
+sync request response sent status=500
+device mknod failed /dev/pfsctldev errno=17
+device mknod failed /dev/lvdctl errno=17
+device mknod failed /dev/sbl_srv errno=17
+vsh mount environment initialized
+sync begin CUSA00755/slot000 11e3daed -> 11e3daee
+creating destination pfs, source size=10485760
+mount source /data/ps4-save-agent/1791923769/sdimg_slot000
+mount destination /data/ps4-save-agent/1791923769/dst_sdimg_slot000
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+could not get account id for 11e3daee
+sync request response sent status=500
+PS4SAVEAGENT 0.5 starting on port 8084
+bind 0.0.0.0:8084 failed: Address already in use
+PS4SAVEAGENT 0.5 stopped
+PS4SAVEAGENT 0.5 starting on port 8084
+PS4SAVEAGENT 0.5 listening on 0.0.0.0:8084
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+sync request response sent status=500
+PS4SAVEAGENT 0.5 stopped
+PS4SAVEAGENT 0.5 starting on port 8084
+PS4SAVEAGENT 0.5 listening on 0.0.0.0:8084
+device mknod failed /dev/pfsctldev errno=17
+device mknod failed /dev/lvdctl errno=17
+device mknod failed /dev/sbl_srv errno=17
+vsh mount environment initialized
+sync begin CUSA00755/slot000 11e3daed -> 11e3daee
+creating destination pfs, source size=10485760
+mount source /data/ps4-save-agent/1791923945/sdimg_slot000
+mount destination /data/ps4-save-agent/1791923945/dst_sdimg_slot000
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+could not get account id for 11e3daee
+sync request response sent status=500
+device mknod failed /dev/pfsctldev errno=17
+device mknod failed /dev/lvdctl errno=17
+device mknod failed /dev/sbl_srv errno=17
+vsh mount environment initialized
+sync begin CUSA00755/slot000 11e3daed -> 11e3daee
+creating destination pfs, source size=10485760
+mount source /data/ps4-save-agent/1791924351/sdimg_slot000
+mount destination /data/ps4-save-agent/1791924351/dst_sdimg_slot000
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+could not get account id for 11e3daee
+sync request response sent status=500
+PS4SAVEAGENT 0.5 starting on port 8084
+PS4SAVEAGENT 0.5 listening on 0.0.0.0:8084
+device mknod failed /dev/pfsctldev errno=17
+device mknod failed /dev/lvdctl errno=17
+device mknod failed /dev/sbl_srv errno=17
+vsh mount environment initialized
+sync begin CUSA00755/slot000 11e3daed -> 11e3daee
+creating destination pfs, source size=10485760
+mount source /data/ps4-save-agent/1791924889/sdimg_slot000
+mount destination /data/ps4-save-agent/1791924889/dst_sdimg_slot000
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+param.sfo patched aid=2222222222222222 user_id=11e3daee for 11e3daee
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+savedata.db updated for CUSA00755/slot000 user 11e3daee
+sync complete CUSA00755/slot000 -> 11e3daee
+sync request response sent status=500
+device mknod failed /dev/pfsctldev errno=17
+device mknod failed /dev/lvdctl errno=17
+device mknod failed /dev/sbl_srv errno=17
+vsh mount environment initialized
+sync begin CUSA00755/slot000 11e3daed -> 11e3daee
+creating destination pfs, source size=10485760
+mount source /data/ps4-save-agent/1791925020/sdimg_slot000
+mount destination /data/ps4-save-agent/1791925020/dst_sdimg_slot000
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+param.sfo patched aid=2222222222222222 user_id=11e3daee for 11e3daee
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+savedata.db updated for CUSA00755/slot000 user 11e3daee
+sync complete CUSA00755/slot000 -> 11e3daee
+sync request response sent status=500
+device mknod failed /dev/pfsctldev errno=17
+device mknod failed /dev/lvdctl errno=17
+device mknod failed /dev/sbl_srv errno=17
+vsh mount environment initialized
+sync begin CUSA00755/slot000 11e3daed -> 11e3daee
+creating destination pfs, source size=10485760
+mount source /data/ps4-save-agent/1791925155/sdimg_slot000
+mount destination /data/ps4-save-agent/1791925155/dst_sdimg_slot000
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+param.sfo patched aid=2222222222222222 user_id=11e3daee for 11e3daee
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+savedata.db updated for CUSA00755/slot000 user 11e3daee
+sync complete CUSA00755/slot000 -> 11e3daee
+sync request response sent status=500
+PS4SAVEAGENT 0.5 stopped
+PS4SAVEAGENT 0.5 starting on port 8084
+PS4SAVEAGENT 0.5 listening on 0.0.0.0:8084
+device mknod failed /dev/pfsctldev errno=17
+device mknod failed /dev/lvdctl errno=17
+device mknod failed /dev/sbl_srv errno=17
+vsh mount environment initialized
+sync begin CUSA00755/slot000 11e3daed -> 11e3daee
+creating destination pfs, source size=10485760
+mount source /data/ps4-save-agent/1791925421/sdimg_slot000
+mount destination /data/ps4-save-agent/1791925421/dst_sdimg_slot000
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+param.sfo patched aid=2222222222222222 user_id=11e3daee for 11e3daee
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+savedata.db updated for CUSA00755/slot000 user 11e3daee
+sync complete CUSA00755/slot000 -> 11e3daee
+sync request response sent status=500
+device mknod failed /dev/pfsctldev errno=17
+device mknod failed /dev/lvdctl errno=17
+device mknod failed /dev/sbl_srv errno=17
+vsh mount environment initialized
+sync begin CUSA11260/MANUALSAVE1 11e3daed -> 11e3daee
+creating destination pfs, source size=12779520
+mount source /data/ps4-save-agent/1791925504/sdimg_MANUALSAVE1
+mount destination /data/ps4-save-agent/1791925504/dst_sdimg_MANUALSAVE1
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+param.sfo patched aid=2222222222222222 user_id=11e3daee for 11e3daee
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+savedata.db inserted for CUSA11260/MANUALSAVE1 user 11e3daee
+sync complete CUSA11260/MANUALSAVE1 -> 11e3daee
+sync request response sent status=500
+PS4SAVEAGENT 0.5 stopped
+PS4SAVEAGENT 0.5 starting on port 8084
+PS4SAVEAGENT 0.5 listening on 0.0.0.0:8084
+PS4SAVEAGENT 0.5 stopped
+PS4SAVEAGENT 0.5 starting on port 8084
+PS4SAVEAGENT 0.5 listening on 0.0.0.0:8084
+device mknod failed /dev/pfsctldev errno=17
+device mknod failed /dev/lvdctl errno=17
+device mknod failed /dev/sbl_srv errno=17
+vsh mount environment initialized
+sync begin CUSA00755/slot000 11e3daed -> 11e3daee
+creating destination pfs, source size=10485760
+mount source /data/ps4-save-agent/1791925665/sdimg_slot000
+mount destination /data/ps4-save-agent/1791925665/dst_sdimg_slot000
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+param.sfo patched aid=2222222222222222 user_id=11e3daee for 11e3daee
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+savedata.db updated for CUSA00755/slot000 user 11e3daee
+sync complete CUSA00755/slot000 -> 11e3daee
+sync request response sent status=200
+device mknod failed /dev/pfsctldev errno=17
+device mknod failed /dev/lvdctl errno=17
+device mknod failed /dev/sbl_srv errno=17
+vsh mount environment initialized
+sync begin CUSA11260/MANUALSAVE0 11e3daed -> 11e3daee
+creating destination pfs, source size=12779520
+mount source /data/ps4-save-agent/1791925779/sdimg_MANUALSAVE0
+mount destination /data/ps4-save-agent/1791925779/dst_sdimg_MANUALSAVE0
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+param.sfo patched aid=2222222222222222 user_id=11e3daee for 11e3daee
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+savedata.db inserted for CUSA11260/MANUALSAVE0 user 11e3daee
+sync complete CUSA11260/MANUALSAVE0 -> 11e3daee
+sync request response sent status=200
+device mknod failed /dev/pfsctldev errno=17
+device mknod failed /dev/lvdctl errno=17
+device mknod failed /dev/sbl_srv errno=17
+vsh mount environment initialized
+sync begin CUSA11260/PROFILE 11e3daed -> 11e3daee
+creating destination pfs, source size=3145728
+mount source /data/ps4-save-agent/1791925781/sdimg_PROFILE
+mount destination /data/ps4-save-agent/1791925781/dst_sdimg_PROFILE
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+param.sfo patched aid=2222222222222222 user_id=11e3daee for 11e3daee
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+savedata.db inserted for CUSA11260/PROFILE user 11e3daee
+sync complete CUSA11260/PROFILE -> 11e3daee
+sync request response sent status=200
+PS4SAVEAGENT 0.5 stopped
+PS4SAVEAGENT 0.5 starting on port 8084
+PS4SAVEAGENT 0.5 listening on 0.0.0.0:8084
+device mknod failed /dev/pfsctldev errno=17
+device mknod failed /dev/lvdctl errno=17
+device mknod failed /dev/sbl_srv errno=17
+vsh mount environment initialized
+sync begin CUSA11260/MANUALSAVE2 11e3daed -> 11e3daee
+creating destination pfs, source size=12779520
+mount source /data/ps4-save-agent/1791926392/sdimg_MANUALSAVE2
+mount destination /data/ps4-save-agent/1791926392/dst_sdimg_MANUALSAVE2
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+param.sfo patched aid=2222222222222222 user_id=11e3daee for 11e3daee
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+savedata.db inserted for CUSA11260/MANUALSAVE2 user 11e3daee
+sync complete CUSA11260/MANUALSAVE2 -> 11e3daee
+sync request response sent status=200
+device mknod failed /dev/pfsctldev errno=17
+device mknod failed /dev/lvdctl errno=17
+device mknod failed /dev/sbl_srv errno=17
+vsh mount environment initialized
+sync begin CUSA11260/PROFILE 11e3daed -> 11e3daee
+creating destination pfs, source size=3145728
+mount source /data/ps4-save-agent/1791926394/sdimg_PROFILE
+mount destination /data/ps4-save-agent/1791926394/dst_sdimg_PROFILE
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+param.sfo patched aid=2222222222222222 user_id=11e3daee for 11e3daee
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+savedata.db inserted for CUSA11260/PROFILE user 11e3daee
+sync complete CUSA11260/PROFILE -> 11e3daee
+sync request response sent status=200
+device mknod failed /dev/pfsctldev errno=17
+device mknod failed /dev/lvdctl errno=17
+device mknod failed /dev/sbl_srv errno=17
+vsh mount environment initialized
+sync begin CUSA13632/save1 11e3daed -> 11e3daee
+creating destination pfs, source size=4194304
+mount source /data/ps4-save-agent/1791926424/sdimg_save1
+mount destination /data/ps4-save-agent/1791926424/dst_sdimg_save1
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+param.sfo patched aid=2222222222222222 user_id=11e3daee for 11e3daee
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+savedata.db inserted for CUSA13632/save1 user 11e3daee
+sync complete CUSA13632/save1 -> 11e3daee
+sync request response sent status=200
+device mknod failed /dev/pfsctldev errno=17
+device mknod failed /dev/lvdctl errno=17
+device mknod failed /dev/sbl_srv errno=17
+vsh mount environment initialized
+sync begin CUSA13632/sce_sdmemory 11e3daed -> 11e3daee
+creating destination pfs, source size=39026688
+mount source /data/ps4-save-agent/1791926426/sdimg_sce_sdmemory
+mount destination /data/ps4-save-agent/1791926426/dst_sdimg_sce_sdmemory
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+param.sfo patched aid=2222222222222222 user_id=11e3daee for 11e3daee
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+savedata.db inserted for CUSA13632/sce_sdmemory user 11e3daee
+sync complete CUSA13632/sce_sdmemory -> 11e3daee
+sync request response sent status=200
+device mknod failed /dev/pfsctldev errno=17
+device mknod failed /dev/lvdctl errno=17
+device mknod failed /dev/sbl_srv errno=17
+vsh mount environment initialized
+sync begin CUSA11260/AUTOSAVE0 11e3daed -> 11e3daee
+creating destination pfs, source size=12779520
+mount source /data/ps4-save-agent/1791926646/sdimg_AUTOSAVE0
+mount destination /data/ps4-save-agent/1791926646/dst_sdimg_AUTOSAVE0
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+param.sfo patched aid=2222222222222222 user_id=11e3daee for 11e3daee
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+savedata.db inserted for CUSA11260/AUTOSAVE0 user 11e3daee
+sync complete CUSA11260/AUTOSAVE0 -> 11e3daee
+sync request response sent status=200
+device mknod failed /dev/pfsctldev errno=17
+device mknod failed /dev/lvdctl errno=17
+device mknod failed /dev/sbl_srv errno=17
+vsh mount environment initialized
+sync begin CUSA11260/AUTOSAVE1 11e3daed -> 11e3daee
+creating destination pfs, source size=12779520
+mount source /data/ps4-save-agent/1791926649/sdimg_AUTOSAVE1
+mount destination /data/ps4-save-agent/1791926649/dst_sdimg_AUTOSAVE1
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+param.sfo patched aid=2222222222222222 user_id=11e3daee for 11e3daee
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+savedata.db inserted for CUSA11260/AUTOSAVE1 user 11e3daee
+sync complete CUSA11260/AUTOSAVE1 -> 11e3daee
+sync request response sent status=200
+device mknod failed /dev/pfsctldev errno=17
+device mknod failed /dev/lvdctl errno=17
+device mknod failed /dev/sbl_srv errno=17
+vsh mount environment initialized
+sync begin CUSA11260/MANUALSAVE2 11e3daed -> 11e3daee
+creating destination pfs, source size=12779520
+mount source /data/ps4-save-agent/1791926653/sdimg_MANUALSAVE2
+mount destination /data/ps4-save-agent/1791926653/dst_sdimg_MANUALSAVE2
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+param.sfo patched aid=2222222222222222 user_id=11e3daee for 11e3daee
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+savedata.db updated for CUSA11260/MANUALSAVE2 user 11e3daee
+sync complete CUSA11260/MANUALSAVE2 -> 11e3daee
+sync request response sent status=200
+device mknod failed /dev/pfsctldev errno=17
+device mknod failed /dev/lvdctl errno=17
+device mknod failed /dev/sbl_srv errno=17
+vsh mount environment initialized
+sync begin CUSA11260/MANUALSAVE0 11e3daed -> 11e3daee
+creating destination pfs, source size=12779520
+mount source /data/ps4-save-agent/1791926656/sdimg_MANUALSAVE0
+mount destination /data/ps4-save-agent/1791926656/dst_sdimg_MANUALSAVE0
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+param.sfo patched aid=2222222222222222 user_id=11e3daee for 11e3daee
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+savedata.db inserted for CUSA11260/MANUALSAVE0 user 11e3daee
+sync complete CUSA11260/MANUALSAVE0 -> 11e3daee
+sync request response sent status=200
+device mknod failed /dev/pfsctldev errno=17
+device mknod failed /dev/lvdctl errno=17
+device mknod failed /dev/sbl_srv errno=17
+vsh mount environment initialized
+sync begin CUSA11260/MANUALSAVE1 11e3daed -> 11e3daee
+creating destination pfs, source size=12779520
+mount source /data/ps4-save-agent/1791926660/sdimg_MANUALSAVE1
+mount destination /data/ps4-save-agent/1791926660/dst_sdimg_MANUALSAVE1
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+param.sfo patched aid=2222222222222222 user_id=11e3daee for 11e3daee
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+savedata.db inserted for CUSA11260/MANUALSAVE1 user 11e3daee
+sync complete CUSA11260/MANUALSAVE1 -> 11e3daee
+sync request response sent status=200
+device mknod failed /dev/pfsctldev errno=17
+device mknod failed /dev/lvdctl errno=17
+device mknod failed /dev/sbl_srv errno=17
+vsh mount environment initialized
+sync begin CUSA11260/PROFILE 11e3daed -> 11e3daee
+creating destination pfs, source size=3145728
+mount source /data/ps4-save-agent/1791926662/sdimg_PROFILE
+mount destination /data/ps4-save-agent/1791926662/dst_sdimg_PROFILE
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+param.sfo patched aid=2222222222222222 user_id=11e3daee for 11e3daee
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+savedata.db updated for CUSA11260/PROFILE user 11e3daee
+sync complete CUSA11260/PROFILE -> 11e3daee
+sync request response sent status=200
+device mknod failed /dev/pfsctldev errno=17
+device mknod failed /dev/lvdctl errno=17
+device mknod failed /dev/sbl_srv errno=17
+vsh mount environment initialized
+sync begin CUSA11260/QUICKSAVE0 11e3daed -> 11e3daee
+creating destination pfs, source size=12779520
+mount source /data/ps4-save-agent/1791926664/sdimg_QUICKSAVE0
+mount destination /data/ps4-save-agent/1791926664/dst_sdimg_QUICKSAVE0
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+param.sfo patched aid=2222222222222222 user_id=11e3daee for 11e3daee
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+savedata.db inserted for CUSA11260/QUICKSAVE0 user 11e3daee
+sync complete CUSA11260/QUICKSAVE0 -> 11e3daee
+sync request response sent status=200
+device mknod failed /dev/pfsctldev errno=17
+device mknod failed /dev/lvdctl errno=17
+device mknod failed /dev/sbl_srv errno=17
+vsh mount environment initialized
+sync begin CUSA11260/MANUALSAVE10 11e3daed -> 11e3daee
+creating destination pfs, source size=12779520
+mount source /data/ps4-save-agent/1791926667/sdimg_MANUALSAVE10
+mount copied source failed 0x80020060; trying original /user/home/11e3daed/savedata/CUSA11260/sdimg_MANUALSAVE10
+sync request response sent status=200
+device mknod failed /dev/pfsctldev errno=17
+device mknod failed /dev/lvdctl errno=17
+device mknod failed /dev/sbl_srv errno=17
+vsh mount environment initialized
+sync begin CUSA11260/MANUALSAVE11 11e3daed -> 11e3daee
+creating destination pfs, source size=12779520
+mount source /data/ps4-save-agent/1791926669/sdimg_MANUALSAVE11
+mount copied source failed 0x80020060; trying original /user/home/11e3daed/savedata/CUSA11260/sdimg_MANUALSAVE11
+sync request response sent status=200
+device mknod failed /dev/pfsctldev errno=17
+device mknod failed /dev/lvdctl errno=17
+device mknod failed /dev/sbl_srv errno=17
+vsh mount environment initialized
+sync begin CUSA11260/MANUALSAVE3 11e3daed -> 11e3daee
+creating destination pfs, source size=12779520
+mount source /data/ps4-save-agent/1791927219/sdimg_MANUALSAVE3
+mount destination /data/ps4-save-agent/1791927219/dst_sdimg_MANUALSAVE3
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+param.sfo patched aid=2222222222222222 user_id=11e3daee for 11e3daee
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+savedata.db inserted for CUSA11260/MANUALSAVE3 user 11e3daee
+sync complete CUSA11260/MANUALSAVE3 -> 11e3daee
+sync request response sent status=200
+device mknod failed /dev/pfsctldev errno=17
+device mknod failed /dev/lvdctl errno=17
+device mknod failed /dev/sbl_srv errno=17
+vsh mount environment initialized
+sync begin CUSA11260/PROFILE 11e3daed -> 11e3daee
+creating destination pfs, source size=3145728
+mount source /data/ps4-save-agent/1791927222/sdimg_PROFILE
+mount destination /data/ps4-save-agent/1791927222/dst_sdimg_PROFILE
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+param.sfo patched aid=2222222222222222 user_id=11e3daee for 11e3daee
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+savedata.db updated for CUSA11260/PROFILE user 11e3daee
+sync complete CUSA11260/PROFILE -> 11e3daee
+sync request response sent status=200
+PS4SAVEAGENT 0.5 stopped
+PS4SAVEAGENT 0.5 starting on port 8084
+PS4SAVEAGENT 0.5 listening on 0.0.0.0:8084
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+PS4SAVEAGENT 0.5 stopped
+PS4SAVEAGENT 0.5 starting on port 8084
+PS4SAVEAGENT 0.5 listening on 0.0.0.0:8084
+device mknod failed /dev/pfsctldev errno=17
+device mknod failed /dev/lvdctl errno=17
+device mknod failed /dev/sbl_srv errno=17
+vsh mount environment initialized
+sync begin CUSA11260/MANUALSAVE3 11e3daed -> 11e3daee
+using existing destination pfs as base to preserve sce_sys
+mount source /data/ps4-save-agent/1791927841/sdimg_MANUALSAVE3
+mount destination /data/ps4-save-agent/1791927841/dst_sdimg_MANUALSAVE3
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+param.sfo patched aid=2222222222222222 user_id=11e3daee for 11e3daee
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+savedata.db updated for CUSA11260/MANUALSAVE3 user 11e3daee
+sync complete CUSA11260/MANUALSAVE3 -> 11e3daee
+work files kept for stability: /data/ps4-save-agent/1791927841
+sync request response sent status=200
+device mknod failed /dev/pfsctldev errno=17
+device mknod failed /dev/lvdctl errno=17
+device mknod failed /dev/sbl_srv errno=17
+vsh mount environment initialized
+sync begin CUSA11260/PROFILE 11e3daed -> 11e3daee
+using existing destination pfs as base to preserve sce_sys
+mount source /data/ps4-save-agent/1791927843/sdimg_PROFILE
+mount destination /data/ps4-save-agent/1791927843/dst_sdimg_PROFILE
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+param.sfo patched aid=2222222222222222 user_id=11e3daee for 11e3daee
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+savedata.db updated for CUSA11260/PROFILE user 11e3daee
+sync complete CUSA11260/PROFILE -> 11e3daee
+work files kept for stability: /data/ps4-save-agent/1791927843
+sync request response sent status=200
+device mknod failed /dev/pfsctldev errno=17
+device mknod failed /dev/lvdctl errno=17
+device mknod failed /dev/sbl_srv errno=17
+vsh mount environment initialized
+sync begin CUSA18198/SAVEDATA00 11e3daed -> 11e3daee
+creating destination pfs, source size=3145728
+mount source /data/ps4-save-agent/1791927845/sdimg_SAVEDATA00
+mount destination /data/ps4-save-agent/1791927845/dst_sdimg_SAVEDATA00
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+param.sfo patched aid=2222222222222222 user_id=11e3daee for 11e3daee
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+savedata.db inserted for CUSA18198/SAVEDATA00 user 11e3daee
+sync complete CUSA18198/SAVEDATA00 -> 11e3daee
+sync request response sent status=200
+device mknod failed /dev/pfsctldev errno=17
+device mknod failed /dev/lvdctl errno=17
+device mknod failed /dev/sbl_srv errno=17
+vsh mount environment initialized
+sync begin CUSA16237/SAVEDATA00 11e3daed -> 11e3daee
+creating destination pfs, source size=3145728
+mount source /data/ps4-save-agent/1791927847/sdimg_SAVEDATA00
+mount destination /data/ps4-save-agent/1791927847/dst_sdimg_SAVEDATA00
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+param.sfo patched aid=2222222222222222 user_id=11e3daee for 11e3daee
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+savedata.db inserted for CUSA16237/SAVEDATA00 user 11e3daee
+sync complete CUSA16237/SAVEDATA00 -> 11e3daee
+sync request response sent status=200
+PS4SAVEAGENT 0.5 stopped
+PS4SAVEAGENT 0.5 starting on port 8084
+PS4SAVEAGENT 0.5 listening on 0.0.0.0:8084
+delete begin CUSA11260/MANUALSAVE3 user 11e3daee
+delete complete CUSA11260/MANUALSAVE3 user 11e3daee
+delete request response sent status=200
+PS4SAVEAGENT 0.5 stopped
+PS4SAVEAGENT 0.5 starting on port 8084
+PS4SAVEAGENT 0.5 listening on 0.0.0.0:8084
+cleanup request response sent status=200
+delete begin CUSA11260/MANUALSAVE3 user 11e3daee
+delete complete CUSA11260/MANUALSAVE3 user 11e3daee
+delete request response sent status=200
+cleanup request response sent status=200
+cleanup request response sent status=200
+delete begin CUSA11260/MANUALSAVE3 user 11e3daee
+delete complete CUSA11260/MANUALSAVE3 user 11e3daee
+delete request response sent status=200
+cleanup request response sent status=200
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+PS4SAVEAGENT 0.5 stopped
+PS4SAVEAGENT 0.5 starting on port 8084
+PS4SAVEAGENT 0.5 listening on 0.0.0.0:8084
+device mknod failed /dev/pfsctldev errno=17
+device mknod failed /dev/lvdctl errno=17
+device mknod failed /dev/sbl_srv errno=17
+vsh mount environment initialized
+import begin CUSA11260/PROFILE user 11e3daee existing=1
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+param.sfo patched aid=2222222222222222 user_id=11e3daee for 11e3daee
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+savedata.db updated for CUSA11260/PROFILE user 11e3daee
+import complete CUSA11260/PROFILE user 11e3daee db=0
+work files kept for stability: /data/ps4-save-agent/import_140_1791929497
+import request response sent status=200
+import begin CUSA11260/MANUALSAVE0 user 11e3daee existing=1
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+param.sfo patched aid=2222222222222222 user_id=11e3daee for 11e3daee
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+savedata.db updated for CUSA11260/MANUALSAVE0 user 11e3daee
+import complete CUSA11260/MANUALSAVE0 user 11e3daee db=0
+work files kept for stability: /data/ps4-save-agent/import_140_1791929511
+import request response sent status=200
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+delete begin CUSA11260/MANUALSAVE0 user 11e3daee
+delete complete CUSA11260/MANUALSAVE0 user 11e3daee
+delete request response sent status=200
+delete begin CUSA11260/PROFILE user 11e3daee
+delete complete CUSA11260/PROFILE user 11e3daee
+delete request response sent status=200
+delete begin CUSA11260/QUICKSAVE0 user 11e3daee
+delete complete CUSA11260/QUICKSAVE0 user 11e3daee
+delete request response sent status=200
+cleanup request response sent status=200
+registry user slot 1 name 'Usuario1' comparing with 'Usuario1'
+import begin CUSA11260/MANUALSAVE6 user 11e3daed existing=0
+registry user slot 1 name 'Usuario1' comparing with 'Usuario1'
+param.sfo patched aid=1111111111111111 user_id=11e3daed for 11e3daed
+registry user slot 1 name 'Usuario1' comparing with 'Usuario1'
+savedata.db inserted for CUSA11260/MANUALSAVE6 user 11e3daed
+import complete CUSA11260/MANUALSAVE6 user 11e3daed db=0
+work files kept for stability: /data/ps4-save-agent/import_140_1791929883
+import request response sent status=200
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+PS4SAVEAGENT 0.5 starting on port 8084
+PS4SAVEAGENT 0.5 listening on 0.0.0.0:8084
+device mknod failed /dev/pfsctldev errno=17
+device mknod failed /dev/lvdctl errno=17
+device mknod failed /dev/sbl_srv errno=17
+vsh mount environment initialized
+import begin CUSA16237/SAVEDATA00 user 11e3daee existing=0
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+param.sfo patched aid=2222222222222222 user_id=11e3daee for 11e3daee
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+savedata.db inserted for CUSA16237/SAVEDATA00 user 11e3daee
+import complete CUSA16237/SAVEDATA00 user 11e3daee db=0
+work files kept for stability: /data/ps4-save-agent/import_383_1791930780
+import request response sent status=200
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+PS4SAVEAGENT 0.5 starting on port 8084
+PS4SAVEAGENT 0.5 listening on 0.0.0.0:8084
+device mknod failed /dev/pfsctldev errno=17
+device mknod failed /dev/lvdctl errno=17
+device mknod failed /dev/sbl_srv errno=17
+vsh mount environment initialized
+import begin CUSA18198/SAVEDATA00 user 11e3daee existing=0
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+param.sfo patched aid=2222222222222222 user_id=11e3daee for 11e3daee
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+savedata.db inserted for CUSA18198/SAVEDATA00 user 11e3daee
+import complete CUSA18198/SAVEDATA00 user 11e3daee db=0
+work files kept for stability: /data/ps4-save-agent/import_389_1791930945
+import request response sent status=200
+PS4SAVEAGENT 0.5 starting on port 8084
+bind 0.0.0.0:8084 failed: Address already in use
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+PS4SAVEAGENT 0.5 starting on port 8084
+PS4SAVEAGENT 0.5 listening on 0.0.0.0:8084
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+device mknod failed /dev/pfsctldev errno=17
+device mknod failed /dev/lvdctl errno=17
+device mknod failed /dev/sbl_srv errno=17
+vsh mount environment initialized
+import begin CUSA24899/SlotsSlot1Data user 11e3daee existing=0
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+param.sfo patched aid=2222222222222222 user_id=11e3daee for 11e3daee
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+savedata.db inserted for CUSA24899/SlotsSlot1Data user 11e3daee
+import complete CUSA24899/SlotsSlot1Data user 11e3daee db=0
+work files kept for stability: /data/ps4-save-agent/import_392_1791931108
+import request response sent status=200
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+PS4SAVEAGENT 0.5 starting on port 8084
+PS4SAVEAGENT 0.5 listening on 0.0.0.0:8084
+device mknod failed /dev/pfsctldev errno=17
+device mknod failed /dev/lvdctl errno=17
+device mknod failed /dev/sbl_srv errno=17
+vsh mount environment initialized
+import begin CUSA24899/Global user 11e3daee existing=0
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+param.sfo patched aid=2222222222222222 user_id=11e3daee for 11e3daee
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+savedata.db inserted for CUSA24899/Global user 11e3daee
+import complete CUSA24899/Global user 11e3daee db=0
+work files kept for stability: /data/ps4-save-agent/import_395_1791931185
+import request response sent status=200
+delete begin CUSA58072/SaveData user 11e3daed
+delete complete CUSA58072/SaveData user 11e3daed
+delete request response sent status=200
+delete begin CUSA20132/SaveItems user 11e3daed
+delete complete CUSA20132/SaveItems user 11e3daed
+delete request response sent status=200
+delete begin CUSA20499/sce_sdmemory user 11e3daed
+delete complete CUSA20499/sce_sdmemory user 11e3daed
+delete request response sent status=200
+delete begin CUSA24899/Global user 11e3daed
+delete complete CUSA24899/Global user 11e3daed
+delete request response sent status=200
+delete begin CUSA24899/SlotsSlot1Data user 11e3daed
+delete complete CUSA24899/SlotsSlot1Data user 11e3daed
+delete request response sent status=200
+delete begin CUSA27770/SAVEDATA00 user 11e3daed
+delete complete CUSA27770/SAVEDATA00 user 11e3daed
+delete request response sent status=200
+delete begin CUSA11260/MANUALSAVE6 user 11e3daed
+delete complete CUSA11260/MANUALSAVE6 user 11e3daed
+delete request response sent status=200
+delete begin CUSA00755/slot000 user 11e3daed
+delete complete CUSA00755/slot000 user 11e3daed
+delete request response sent status=200
+delete begin CUSA11456/infamousssAuto0 user 11e3daed
+delete complete CUSA11456/infamousssAuto0 user 11e3daed
+delete request response sent status=200
+delete begin CUSA11456/infamousssUser0 user 11e3daed
+delete complete CUSA11456/infamousssUser0 user 11e3daed
+delete request response sent status=200
+delete begin CUSA11456/infamousssUser1 user 11e3daed
+delete complete CUSA11456/infamousssUser1 user 11e3daed
+delete request response sent status=200
+delete begin CUSA11456/infamousssUser2 user 11e3daed
+delete complete CUSA11456/infamousssUser2 user 11e3daed
+delete request response sent status=200
+delete begin CUSA11456/infamousssUser7 user 11e3daed
+delete complete CUSA11456/infamousssUser7 user 11e3daed
+delete request response sent status=200
+delete begin CUSA11456/sce_sdmemory user 11e3daed
+delete complete CUSA11456/sce_sdmemory user 11e3daed
+delete request response sent status=200
+delete begin CUSA13632/save1 user 11e3daed
+delete complete CUSA13632/save1 user 11e3daed
+delete request response sent status=200
+delete begin CUSA13632/sce_sdmemory user 11e3daed
+delete complete CUSA13632/sce_sdmemory user 11e3daed
+delete request response sent status=200
+delete begin CUSA39420/restorePoints1 user 11e3daed
+delete complete CUSA39420/restorePoints1 user 11e3daed
+delete request response sent status=200
+delete begin CUSA39420/save1 user 11e3daed
+delete complete CUSA39420/save1 user 11e3daed
+delete request response sent status=200
+delete begin CUSA39420/sce_sdmemory user 11e3daed
+delete complete CUSA39420/sce_sdmemory user 11e3daed
+delete request response sent status=200
+delete begin CUSA05297/AutoSave user 11e3daed
+delete complete CUSA05297/AutoSave user 11e3daed
+delete request response sent status=200
+delete begin CUSA00694/-JOURNEY- user 11e3daed
+delete complete CUSA00694/-JOURNEY- user 11e3daed
+delete request response sent status=200
+delete begin CUSA05929/SaveSlot1 user 11e3daed
+delete complete CUSA05929/SaveSlot1 user 11e3daed
+delete request response sent status=200
+delete begin CUSA05929/SaveSlot1meta user 11e3daed
+delete complete CUSA05929/SaveSlot1meta user 11e3daed
+delete request response sent status=200
+delete begin CUSA05929/UserMeta user 11e3daed
+delete complete CUSA05929/UserMeta user 11e3daed
+delete request response sent status=200
+delete begin CUSA01305/autoSaveData user 11e3daed
+delete complete CUSA01305/autoSaveData user 11e3daed
+delete request response sent status=200
+delete begin CUSA00960/localstorage.aes user 11e3daed
+delete complete CUSA00960/localstorage.aes user 11e3daed
+delete request response sent status=200
+delete begin CUSA06287/savegame user 11e3daed
+delete complete CUSA06287/savegame user 11e3daed
+delete request response sent status=200
+delete begin CUSA06266/savegame user 11e3daed
+delete complete CUSA06266/savegame user 11e3daed
+delete request response sent status=200
+delete begin CUSA03041/SAVEDATAPlayer user 11e3daed
+delete complete CUSA03041/SAVEDATAPlayer user 11e3daed
+delete request response sent status=200
+delete begin CUSA03041/SAVEDATAProfileSettings user 11e3daed
+delete complete CUSA03041/SAVEDATAProfileSettings user 11e3daed
+delete request response sent status=200
+delete begin CUSA03041/SAVEDATASBRDR30015 user 11e3daed
+delete complete CUSA03041/SAVEDATASBRDR30015 user 11e3daed
+delete request response sent status=200
+delete begin CUSA03041/sce_sdmemory user 11e3daed
+delete complete CUSA03041/sce_sdmemory user 11e3daed
+delete request response sent status=200
+delete begin CUSA33878/PS1.VMC user 11e3daed
+delete complete CUSA33878/PS1.VMC user 11e3daed
+delete request response sent status=200
+delete begin CUSA33878/AppSmall user 11e3daed
+delete complete CUSA33878/AppSmall user 11e3daed
+delete request response sent status=200
+delete begin CUSA27632/sce_sdmemory user 11e3daed
+delete complete CUSA27632/sce_sdmemory user 11e3daed
+delete request response sent status=200
+stale savedata.db entry removed: CUSA11260/AUTOSAVE0 user 11e3daed
+stale savedata.db entry removed: CUSA11260/AUTOSAVE1 user 11e3daed
+stale savedata.db entry removed: CUSA11260/MANUALSAVE0 user 11e3daed
+stale savedata.db entry removed: CUSA11260/MANUALSAVE1 user 11e3daed
+stale savedata.db entry removed: CUSA11260/MANUALSAVE10 user 11e3daed
+stale savedata.db entry removed: CUSA11260/MANUALSAVE11 user 11e3daed
+stale savedata.db entry removed: CUSA11260/MANUALSAVE2 user 11e3daed
+stale savedata.db entry removed: CUSA11260/MANUALSAVE3 user 11e3daed
+stale savedata.db entry removed: CUSA11260/PROFILE user 11e3daed
+stale savedata.db entry removed: CUSA11260/QUICKSAVE0 user 11e3daed
+stale savedata.db entry removed: CUSA16237/SAVEDATA00 user 11e3daed
+stale savedata.db entry removed: CUSA18198/SAVEDATA00 user 11e3daed
+cleanup request response sent status=200
+registry user slot 1 name 'Usuario1' comparing with 'Usuario1'
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+registry user slot 1 name 'Usuario1' comparing with 'Usuario1'
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+PS4SAVEAGENT 0.5 starting on port 8084
+PS4SAVEAGENT 0.5 listening on 0.0.0.0:8084
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+registry user slot 1 name 'Usuario1' comparing with 'Usuario1'
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+registry user slot 1 name 'Usuario1' comparing with 'Usuario1'
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+device mknod failed /dev/pfsctldev errno=17
+device mknod failed /dev/lvdctl errno=17
+device mknod failed /dev/sbl_srv errno=17
+vsh mount environment initialized
+sync begin CUSA11260/MANUALSAVE6 11e3daed -> 11e3daee
+creating destination pfs, source size=12779520
+mount source /data/ps4-save-agent/1791932186/sdimg_MANUALSAVE6
+mount destination /data/ps4-save-agent/1791932186/dst_sdimg_MANUALSAVE6
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+param.sfo patched aid=2222222222222222 user_id=11e3daee for 11e3daee
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+savedata.db inserted for CUSA11260/MANUALSAVE6 user 11e3daee
+sync complete CUSA11260/MANUALSAVE6 -> 11e3daee
+sync request response sent status=200
+device mknod failed /dev/pfsctldev errno=17
+device mknod failed /dev/lvdctl errno=17
+device mknod failed /dev/sbl_srv errno=17
+vsh mount environment initialized
+sync begin CUSA11260/PROFILE 11e3daed -> 11e3daee
+using existing destination pfs as base to preserve sce_sys
+mount source /data/ps4-save-agent/1791932276/sdimg_PROFILE
+mount destination /data/ps4-save-agent/1791932276/dst_sdimg_PROFILE
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+param.sfo patched aid=2222222222222222 user_id=11e3daee for 11e3daee
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+savedata.db updated for CUSA11260/PROFILE user 11e3daee
+sync complete CUSA11260/PROFILE -> 11e3daee
+work files kept for stability: /data/ps4-save-agent/1791932276
+sync request response sent status=200
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+delete begin CUSA11260/PROFILE user 11e3daee
+delete complete CUSA11260/PROFILE user 11e3daee
+delete request response sent status=200
+delete begin CUSA11260/MANUALSAVE2 user 11e3daee
+delete complete CUSA11260/MANUALSAVE2 user 11e3daee
+delete request response sent status=200
+delete begin CUSA11260/MANUALSAVE1 user 11e3daee
+delete complete CUSA11260/MANUALSAVE1 user 11e3daee
+delete request response sent status=200
+delete begin CUSA11260/MANUALSAVE6 user 11e3daee
+delete complete CUSA11260/MANUALSAVE6 user 11e3daee
+delete request response sent status=200
+delete begin CUSA11260/MANUALSAVE0 user 11e3daee
+delete complete CUSA11260/MANUALSAVE0 user 11e3daee
+delete request response sent status=200
+delete begin CUSA11260/QUICKSAVE0 user 11e3daee
+delete complete CUSA11260/QUICKSAVE0 user 11e3daee
+delete request response sent status=200
+cleanup request response sent status=200
+device mknod failed /dev/pfsctldev errno=17
+device mknod failed /dev/lvdctl errno=17
+device mknod failed /dev/sbl_srv errno=17
+vsh mount environment initialized
+sync begin CUSA11260/PROFILE 11e3daed -> 11e3daee
+creating destination pfs, source size=3145728
+mount source /data/ps4-save-agent/1791933371/sdimg_PROFILE
+mount destination /data/ps4-save-agent/1791933371/dst_sdimg_PROFILE
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+param.sfo patched aid=2222222222222222 user_id=11e3daee for 11e3daee
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+savedata.db inserted for CUSA11260/PROFILE user 11e3daee
+sync complete CUSA11260/PROFILE -> 11e3daee
+sync request response sent status=200
+device mknod failed /dev/pfsctldev errno=17
+device mknod failed /dev/lvdctl errno=17
+device mknod failed /dev/sbl_srv errno=17
+vsh mount environment initialized
+sync begin CUSA11260/MANUALSAVE6 11e3daed -> 11e3daee
+creating destination pfs, source size=12779520
+mount source /data/ps4-save-agent/1791933372/sdimg_MANUALSAVE6
+mount destination /data/ps4-save-agent/1791933372/dst_sdimg_MANUALSAVE6
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+param.sfo patched aid=2222222222222222 user_id=11e3daee for 11e3daee
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+savedata.db inserted for CUSA11260/MANUALSAVE6 user 11e3daee
+sync complete CUSA11260/MANUALSAVE6 -> 11e3daee
+sync request response sent status=200
+PS4SAVEAGENT 0.5 starting on port 8084
+PS4SAVEAGENT 0.5 listening on 0.0.0.0:8084
+registry user slot 1 name 'Usuario1' comparing with 'Usuario1'
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+registry user slot 1 name 'Usuario1' comparing with 'Usuario1'
+registry user slot 1 name 'Usuario1' comparing with 'Usuario1'
+registry user slot 1 name 'Usuario1' comparing with 'Usuario1'
+registry user slot 1 name 'Usuario1' comparing with 'Usuario1'
+registry user slot 1 name 'Usuario1' comparing with 'Usuario1'
+registry user slot 1 name 'Usuario1' comparing with 'Usuario1'
+registry user slot 1 name 'Usuario1' comparing with 'Usuario1'
+registry user slot 1 name 'Usuario1' comparing with 'Usuario1'
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+device mknod failed /dev/pfsctldev errno=17
+device mknod failed /dev/lvdctl errno=17
+device mknod failed /dev/sbl_srv errno=17
+vsh mount environment initialized
+sync begin CUSA16237/SAVEDATA00 11e3daed -> 11e3daee
+creating destination pfs, source size=3145728
+mount source /data/ps4-save-agent/1791977929/sdimg_SAVEDATA00
+mount destination /data/ps4-save-agent/1791977929/dst_sdimg_SAVEDATA00
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+param.sfo patched aid=2222222222222222 user_id=11e3daee for 11e3daee
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+savedata.db inserted for CUSA16237/SAVEDATA00 user 11e3daee
+sync complete CUSA16237/SAVEDATA00 -> 11e3daee
+sync request response sent status=200
+registry user slot 1 name 'Usuario1' comparing with 'Usuario1'
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+device mknod failed /dev/pfsctldev errno=17
+device mknod failed /dev/lvdctl errno=17
+device mknod failed /dev/sbl_srv errno=17
+vsh mount environment initialized
+sync begin CUSA16237/SAVEDATA00 11e3daed -> 11e3daee
+using existing destination pfs as base to preserve sce_sys
+mount source /data/ps4-save-agent/1791978549/sdimg_SAVEDATA00
+mount destination /data/ps4-save-agent/1791978549/dst_sdimg_SAVEDATA00
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+param.sfo patched aid=2222222222222222 user_id=11e3daee for 11e3daee
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+savedata.db updated for CUSA16237/SAVEDATA00 user 11e3daee
+sync complete CUSA16237/SAVEDATA00 -> 11e3daee
+work files kept for stability: /data/ps4-save-agent/1791978549
+sync request response sent status=200
+registry user slot 1 name 'Usuario1' comparing with 'Usuario1'
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+delete begin CUSA11260/PROFILE user 11e3daee
+delete complete CUSA11260/PROFILE user 11e3daee
+delete request response sent status=200
+delete begin CUSA11260/MANUALSAVE0 user 11e3daee
+delete complete CUSA11260/MANUALSAVE0 user 11e3daee
+delete request response sent status=200
+delete begin CUSA11260/MANUALSAVE6 user 11e3daee
+delete complete CUSA11260/MANUALSAVE6 user 11e3daee
+delete request response sent status=200
+delete begin CUSA16237/SAVEDATA00 user 11e3daee
+delete complete CUSA16237/SAVEDATA00 user 11e3daee
+delete request response sent status=200
+cleanup request response sent status=200
+registry user slot 1 name 'Usuario1' comparing with 'Usuario1'
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+registry user slot 1 name 'Usuario1' comparing with 'Usuario1'
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+registry user slot 1 name 'Usuario1' comparing with 'Usuario1'
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+device mknod failed /dev/pfsctldev errno=2
+device mknod failed /dev/lvdctl errno=2
+device mknod failed /dev/sbl_srv errno=2
+vsh mount environment initialized
+import begin CUSA11260/MANUALSAVE0 user 11e3daee existing=0
+import request response sent status=500
+PS4SAVEAGENT 0.5 starting on port 8084
+bind 0.0.0.0:8084 failed: Address already in use
+                                                                                                                              PS4SAVEAGENT 0.5 starting on port 8084
+PS4SAVEAGENT 0.5 listening on 0.0.0.0:8084
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+device mknod failed /dev/pfsctldev errno=17
+device mknod failed /dev/lvdctl errno=17
+device mknod failed /dev/sbl_srv errno=17
+vsh mount environment initialized
+import begin CUSA11260/MANUALSAVE0 user 11e3daee existing=0
+import request response sent status=500
+registry user slot 1 name 'Usuario1' comparing with 'Usuario1'
+PS4SAVEAGENT 0.5 starting on port 8084
+PS4SAVEAGENT 0.5 listening on 0.0.0.0:8084
+registry user slot 1 name 'Usuario1' comparing with 'Usuario1'
+device mknod failed /dev/pfsctldev errno=17
+device mknod failed /dev/lvdctl errno=17
+device mknod failed /dev/sbl_srv errno=17
+vsh mount environment initialized
+export begin CUSA16237/SAVEDATA00 user 11e3daed
+export complete CUSA16237/SAVEDATA00 user 11e3daed
+export request response sent status=200
+export begin CUSA16237/SAVEDATA00 user 11e3daed
+export complete CUSA16237/SAVEDATA00 user 11e3daed
+export request response sent status=200
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+import begin CUSA16237/SAVEDATA00 user 11e3daee existing=0
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+param.sfo patched aid=2222222222222222 user_id=11e3daee for 11e3daee
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+savedata.db inserted for CUSA16237/SAVEDATA00 user 11e3daee
+import complete CUSA16237/SAVEDATA00 user 11e3daee db=0
+work files kept for stability: /data/ps4-save-agent/import_69_1791985678
+import request response sent status=200
+registry user slot 1 name 'Usuario1' comparing with 'Usuario1'
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+delete begin CUSA16237/SAVEDATA00 user 11e3daee
+delete complete CUSA16237/SAVEDATA00 user 11e3daee
+delete request response sent status=200
+cleanup request response sent status=200
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+PS4SAVEAGENT 0.5 starting on port 8084
+PS4SAVEAGENT 0.5 listening on 0.0.0.0:8084
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+device mknod failed /dev/pfsctldev errno=17
+device mknod failed /dev/lvdctl errno=17
+device mknod failed /dev/sbl_srv errno=17
+vsh mount environment initialized
+import begin CUSA16237/SAVEDATA00 user 11e3daee existing=0
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+param.sfo patched aid=2222222222222222 user_id=11e3daee for 11e3daee
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+savedata.db inserted for CUSA16237/SAVEDATA00 user 11e3daee
+import complete CUSA16237/SAVEDATA00 user 11e3daee db=0
+work files kept for stability: /data/ps4-save-agent/import_74_1791986170
+import request response sent status=200
+registry user slot 1 name 'Usuario1' comparing with 'Usuario1'
+registry user slot 1 name 'Usuario1' comparing with 'Usuario1'
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+delete begin CUSA16237/SAVEDATA00 user 11e3daee
+delete complete CUSA16237/SAVEDATA00 user 11e3daee
+delete request response sent status=200
+cleanup request response sent status=200
+PS4SAVEAGENT 0.5 starting on port 8084
+PS4SAVEAGENT 0.5 listening on 0.0.0.0:8084
+device mknod failed /dev/pfsctldev errno=17
+device mknod failed /dev/lvdctl errno=17
+device mknod failed /dev/sbl_srv errno=17
+vsh mount environment initialized
+import begin CUSA16237/SAVEDATA00 user 11e3daee existing=0
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+param.sfo patched aid=2222222222222222 user_id=11e3daee for 11e3daee
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+savedata.db inserted for CUSA16237/SAVEDATA00 user 11e3daee
+import complete CUSA16237/SAVEDATA00 user 11e3daee db=0
+work files kept for stability: /data/ps4-save-agent/import_77_1791986346
+import request response sent status=200
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+delete begin CUSA16237/SAVEDATA00 user 11e3daee
+delete complete CUSA16237/SAVEDATA00 user 11e3daee
+delete request response sent status=200
+cleanup request response sent status=200
+PS4SAVEAGENT 0.5 starting on port 8084
+PS4SAVEAGENT 0.5 listening on 0.0.0.0:8084
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+registry user slot 1 name 'Usuario1' comparing with 'Usuario1'
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+device mknod failed /dev/pfsctldev errno=17
+device mknod failed /dev/lvdctl errno=17
+device mknod failed /dev/sbl_srv errno=17
+vsh mount environment initialized
+sync begin CUSA16237/SAVEDATA00 11e3daed -> 11e3daee
+creating destination pfs, source size=3145728
+mount source /data/ps4-save-agent/1791986636/sdimg_SAVEDATA00
+mount destination /data/ps4-save-agent/1791986636/dst_sdimg_SAVEDATA00
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+param.sfo patched aid=2222222222222222 user_id=11e3daee for 11e3daee
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+savedata.db inserted for CUSA16237/SAVEDATA00 user 11e3daee
+sync complete CUSA16237/SAVEDATA00 -> 11e3daee
+sync request response sent status=200
+registry user slot 1 name 'Usuario1' comparing with 'Usuario1'
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+delete begin CUSA16237/SAVEDATA00 user 11e3daee
+delete complete CUSA16237/SAVEDATA00 user 11e3daee
+delete request response sent status=200
+cleanup request response sent status=200
+device mknod failed /dev/pfsctldev errno=2
+device mknod failed /dev/lvdctl errno=2
+device mknod failed /dev/sbl_srv errno=2
+vsh mount environment initialized
+import begin CUSA16237/SAVEDATA00 user 11e3daee existing=0
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+param.sfo patched aid=2222222222222222 user_id=11e3daee for 11e3daee
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+savedata.db inserted for CUSA16237/SAVEDATA00 user 11e3daee
+import complete CUSA16237/SAVEDATA00 user 11e3daee db=0
+work files kept for stability: /data/ps4-save-agent/import_94_1791986747
+import request response sent status=200
+registry user slot 1 name 'Usuario1' comparing with 'Usuario1'
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+delete begin CUSA16237/SAVEDATA00 user 11e3daee
+delete complete CUSA16237/SAVEDATA00 user 11e3daee
+delete request response sent status=200
+cleanup request response sent status=200
+PS4SAVEAGENT 0.5 starting on port 8084
+PS4SAVEAGENT 0.5 listening on 0.0.0.0:8084
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+registry user slot 1 name 'Usuario1' comparing with 'Usuario1'
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+device mknod failed /dev/pfsctldev errno=17
+device mknod failed /dev/lvdctl errno=17
+device mknod failed /dev/sbl_srv errno=17
+vsh mount environment initialized
+import begin CUSA16237/SAVEDATA00 user 11e3daee existing=0
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+param.sfo patched aid=2222222222222222 user_id=11e3daee for 11e3daee
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+savedata.db inserted for CUSA16237/SAVEDATA00 user 11e3daee
+import complete CUSA16237/SAVEDATA00 user 11e3daee db=0
+work files kept for stability: /data/ps4-save-agent/import_102_1791987259
+import request response sent status=200
+PS4SAVEAGENT 0.5 starting on port 8084
+PS4SAVEAGENT 0.5 listening on 0.0.0.0:8084
+delete begin CUSA16237/SAVEDATA00 user 11e3daee
+delete complete CUSA16237/SAVEDATA00 user 11e3daee
+delete request response sent status=200
+cleanup request response sent status=200
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+device mknod failed /dev/pfsctldev errno=2
+device mknod failed /dev/lvdctl errno=2
+device mknod failed /dev/sbl_srv errno=2
+vsh mount environment initialized
+import begin CUSA16237/SAVEDATA00 user 11e3daee existing=0
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+param.sfo patched aid=2222222222222222 user_id=11e3daee for 11e3daee
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+savedata.db inserted for CUSA16237/SAVEDATA00 user 11e3daee
+import complete CUSA16237/SAVEDATA00 user 11e3daee db=0
+work files kept for stability: /data/ps4-save-agent/import_105_1791987454
+import request response sent status=200
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+delete begin CUSA16237/SAVEDATA00 user 11e3daee
+delete complete CUSA16237/SAVEDATA00 user 11e3daee
+delete request response sent status=200
+cleanup request response sent status=200
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+PS4SAVEAGENT 0.5 starting on port 8084
+PS4SAVEAGENT 0.5 listening on 0.0.0.0:8084
+registry user slot 1 name 'Usuario1' comparing with 'Usuario1'
+device mknod failed /dev/pfsctldev errno=17
+device mknod failed /dev/lvdctl errno=17
+device mknod failed /dev/sbl_srv errno=17
+vsh mount environment initialized
+export begin CUSA16237/SAVEDATA00 user 11e3daed
+export complete CUSA16237/SAVEDATA00 user 11e3daed
+export request response sent status=200
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+import begin CUSA16237/SAVEDATA00 user 11e3daee existing=0
+import request response sent status=500
+import begin CUSA16237/SAVEDATA00 user 11e3daee existing=0
+import request response sent status=500
+registry user slot 1 name 'Usuario1' comparing with 'Usuario2'
+registry user slot 2 name 'Usuario2' comparing with 'Usuario2'
+import begin CUSA16237/SAVEDATA00 user 11e3daee existing=0
+import request response sent status=500
+import begin CUSA16237/SAVEDATA00 user 11e3daee existing=0
+import request response sent status=500
