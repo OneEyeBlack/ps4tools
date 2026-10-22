@@ -40,7 +40,7 @@ procedure DownloadDecryptedSave(const AHost: string; const ASave: TPS4SaveGame;
   AProgress: TPS4SaveAgentProgressEvent);
 procedure ExportPS4SavesDecrypted(const AHost: string; APort: Word;
   const ASaves: TArray<TPS4SaveGame>; const ADestFolder: string;
-  ALog: TPS4SaveAgentLogEvent);
+  ALog: TPS4SaveAgentLogEvent; AProgress: TPS4SaveAgentProgressEvent);
 function PS4SaveAgentLocalPath: string;
 function PS4SaveAgentRemotePath: string;
 procedure EnsurePS4SaveAgentInstalled(const AHost: string;
@@ -141,9 +141,10 @@ end;
 
 procedure ExportPS4SavesDecrypted(const AHost: string; APort: Word;
   const ASaves: TArray<TPS4SaveGame>; const ADestFolder: string;
-  ALog: TPS4SaveAgentLogEvent);
+  ALog: TPS4SaveAgentLogEvent; AProgress: TPS4SaveAgentProgressEvent);
 begin
-  UnitFunctions.ExportPS4SavesDecrypted(AHost, APort, ASaves, ADestFolder, ALog);
+  UnitFunctions.ExportPS4SavesDecrypted(AHost, APort, ASaves, ADestFolder,
+    ALog, AProgress);
 end;
 
 function PS4SaveAgentLocalPath: string;

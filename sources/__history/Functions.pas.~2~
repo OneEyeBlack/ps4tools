@@ -1,0 +1,2427 @@
+unit Functions;
+
+interface
+
+uses
+  System.Classes, System.SysUtils, System.IOUtils, System.Types,
+  System.Generics.Collections, System.Generics.Defaults,
+  IdFTP, IdFTPCommon, IdFTPList, IdTCPClient;
+
+type
+  TPS4SaveUser = record
+    UserID: string;
+    DisplayName: string;
+  end;
+
+  TPS4SaveGame = record
+    Title: string;
+    UserDisplayName: string;
+    TitleID: string;
+    SaveName: string;
+    UserID: string;
+    ModifiedAt: TDateTime;
+    RemotePath: string;
+    RemoteImagePath: string;
+    RemoteMetaPath: string;
+  end;
+
+  TPS4ConsoleInfo = record
+    Name: string;
+    IP: string;
+  end;
+
+  TPS4SaveLogEvent = procedure(const AMsg: string) of object;
+
+function DiscoverPS4Consoles(const ABaseIP: string; APort: Word;
+  ALog: TPS4SaveLogEvent): TArray<TPS4ConsoleInfo>;
+function ListPS4Users(const AHost: string; APort: Word): TArray<TPS4SaveUser>;
+function ListPS4SaveGames(const AHost: string; APort: Word): TArray<TPS4SaveGame>;
+function ListPS4SaveGamesForUser(const AHost: string; APort: Word;
+  const AUserID: string): TArray<TPS4SaveGame>;
+function PS4SaveDisplayText(const ASave: TPS4SaveGame): string;
+procedure BackupPS4Saves(const AHost: string; APort: Word;
+  const ASaves: TArray<TPS4SaveGame>; const ADestFolder: string;
+  ALog: TPS4SaveLogEvent);
+procedure BackupPS4Trophies(const AHost: string; APort: Word;
+  const ADestFolder: string; ALog: TPS4SaveLogEvent);
+procedure DeletePS4Saves(const AHost: string; APort: Word;
+  const ASaves: TArray<TPS4SaveGame>; ALog: TPS4SaveLogEvent);
+procedure SyncPS4Saves(const ASourceHost, ADestHost: string; APort: Word;
+  const ASaves: TArray<TPS4SaveGame>; ALog: TPS4SaveLogEvent); overload;
+procedure SyncPS4Saves(const ASourceHost, ADestHost: string; APort: Word;
+  const ASaves: TArray<TPS4SaveGame>; const ADestUserID: string;
+  ALog: TPS4SaveLogEvent); overload;
+procedure SyncPS4Saves(const ASourceHost, ADestHost: string; APort: Word;
+  ALog: TPS4SaveLogEvent); overload;
+
+type
+  TPS4SaveAgentLogEvent = procedure(const AMsg: string) of object;
+  TPS4SaveAgentProgressEvent = procedure(const AMsg: string;
+    APosition, AMax: Int64) of object;
+
+function PS4SaveAgentLocalPath: string;
+function PS4SaveAgentRemotePath: string;
+procedure EnsurePS4SaveAgentInstalled(const AHost: string;
+  ALog: TPS4SaveAgentLogEvent);
+procedure EnsurePS4SaveAgentReady(const AHost: string;
+  ALog: TPS4SaveAgentLogEvent);
+function GetPS4SaveAgentAccountID(const AHost, AUserID: string;
+  ALog: TPS4SaveAgentLogEvent): string;
+procedure DeletePS4SaveWithAgent(const AHost: string;
+  const ASave: TPS4SaveGame; ALog: TPS4SaveAgentLogEvent);
+procedure CleanupPS4StaleSavesWithAgent(const AHost, AUserID: string;
+  ALog: TPS4SaveAgentLogEvent);
+procedure SyncPS4SavesDecrypted(const ASourceHost, ADestHost: string;
+  const ASourceUserID, ADestUserID: string; const ASaves: TArray<TPS4SaveGame>;
+  const ABackupRoot: string; ALog: TPS4SaveAgentLogEvent;
+  AProgress: TPS4SaveAgentProgressEvent);
+procedure SyncPS4SavesOnConsole(const AHost: string;
+  const ASourceUserID, ADestUserID: string; const ASaves: TArray<TPS4SaveGame>;
+  ALog: TPS4SaveAgentLogEvent);
+
+implementation
+
+uses
+  System.DateUtils, System.NetEncoding,
+  System.StrUtils, System.Sqlite, Winapi.Windows,
+  IdComponent, IdException, IdExceptionCore, IdGlobal, IdHTTP,
+  IdMultipartFormData, IdURI;
+
+type
+  TAppDbCellArray = array[0..(MaxInt div SizeOf(MarshaledAString) - 1)] of MarshaledAString;
+  PAppDbCellArray = ^TAppDbCellArray;
+
+  TPS4UserInfo = record
+    UserID: string;
+    DisplayName: string;
+  end;
+
+  TPS4TitleInfo = record
+    TitleID: string;
+    TitleName: string;
+  end;
+
+function LooksLikeAnyTitleID(const S: string): Boolean;
+var
+  LValue: string;
+  I: Integer;
+begin
+  LValue := UpperCase(Trim(S));
+  Result := Length(LValue) = 9;
+  if not Result then
+    Exit;
+  for I := 1 to 4 do
+    if not CharInSet(LValue[I], ['A'..'Z']) then
+      Exit(False);
+  for I := 5 to 9 do
+    if not CharInSet(LValue[I], ['0'..'9']) then
+      Exit(False);
+end;
+
+function ResolveGameTitleOnline(const ATitleID: string): string;
+begin
+  Result := UpperCase(Trim(ATitleID));
+end;
+
+function AppDbQuoteIdent(const AValue: string): string;
+begin
+  Result := '"' + StringReplace(AValue, '"', '""', [rfReplaceAll]) + '"';
+end;
+
+function AppDbUtf8(const AValue: MarshaledAString): string;
+begin
+  if AValue = nil then
+    Result := ''
+  else
+    Result := string(UTF8String(AValue));
+end;
+
+function AppDbQuery(const ADb: sqlite3; const ASQL: string): TStringList;
+var
+  Code, Rows, Cols, I, J: Integer;
+  Table: PMarshaledAString;
+  ErrorText: MarshaledAString;
+  Cells: PAppDbCellArray;
+  Utf8Sql: UTF8String;
+  Line: string;
+begin
+  Result := TStringList.Create;
+  Table := nil;
+  ErrorText := nil;
+  Utf8Sql := UTF8String(ASQL);
+  Code := sqlite3_get_table(ADb, PAnsiChar(Utf8Sql), @Table, Rows, Cols, @ErrorText);
+  if Code <> SQLITE_OK then
+  begin
+    try
+      if ErrorText <> nil then
+        raise Exception.Create('Falha ao consultar app.db: ' + AppDbUtf8(ErrorText))
+      else
+        raise Exception.CreateFmt('Falha ao consultar app.db (%d).', [Code]);
+    finally
+      if ErrorText <> nil then sqlite3_free(ErrorText);
+      Result.Free;
+      Result := nil;
+    end;
+  end;
+  try
+    Cells := PAppDbCellArray(Table);
+    for I := 1 to Rows do
+    begin
+      Line := '';
+      for J := 0 to Cols - 1 do
+      begin
+        if J > 0 then Line := Line + #9;
+        Line := Line + AppDbUtf8(Cells[(I * Cols) + J]);
+      end;
+      Result.Add(Line);
+    end;
+  finally
+    if Table <> nil then sqlite3_free_table(Table);
+  end;
+end;
+
+function AppDbColumnExists(const ADb: sqlite3; const ATable, AColumn: string): Boolean;
+var
+  Rows: TStringList;
+  Parts: TArray<string>;
+  I: Integer;
+begin
+  Result := False;
+  Rows := AppDbQuery(ADb, 'PRAGMA table_info(' + AppDbQuoteIdent(ATable) + ')');
+  try
+    for I := 0 to Rows.Count - 1 do
+    begin
+      Parts := Rows[I].Split([#9]);
+      if (Length(Parts) > 1) and SameText(Parts[1], AColumn) then
+        Exit(True);
+    end;
+  finally
+    Rows.Free;
+  end;
+end;
+
+function AppDbReadDisplayName(const ADb: sqlite3; const AUserID: string): string;
+const
+  Tables: array[0..3] of string = ('tbl_user', 'tbl_account', 'tbl_accountinfo', 'tbl_userinfo');
+  IDColumns: array[0..9] of string = ('userId', 'userid', 'user_id', 'id', 'accountId',
+    'account_id', 'localUserId', 'local_user_id', 'loginUserId', 'login_user_id');
+  NameColumns: array[0..13] of string = ('onlineId', 'onlineID', 'online_id', 'npOnlineId',
+    'np_online_id', 'userName', 'username', 'name', 'nickName', 'nickname', 'displayName',
+    'display_name', 'accountName', 'account_name');
+var
+  Table, IDColumn, NameColumn, WantedHex, WantedDec, RowID, RowName: string;
+  Rows: TStringList;
+  Parts: TArray<string>;
+  I: Integer;
+  WantedNumber, NumberValue: UInt64;
+  function Matches(const AValue: string): Boolean;
+  begin
+    Result := SameText(Trim(AValue), AUserID) or SameText(Trim(AValue), WantedHex) or
+      ((WantedDec <> '') and SameText(Trim(AValue), WantedDec));
+    if Result then Exit;
+    if TryStrToUInt64(Trim(AValue), NumberValue) then
+      Result := SameText(IntToHex(NumberValue, 8), WantedHex)
+    else
+      Result := False;
+  end;
+begin
+  Result := '';
+  WantedHex := LowerCase(Trim(AUserID));
+  WantedDec := '';
+  if TryStrToUInt64('$' + WantedHex, WantedNumber) then
+    WantedDec := UIntToStr(WantedNumber);
+  for Table in Tables do
+    for IDColumn in IDColumns do
+      for NameColumn in NameColumns do
+        if AppDbColumnExists(ADb, Table, IDColumn) and AppDbColumnExists(ADb, Table, NameColumn) then
+        begin
+          Rows := AppDbQuery(ADb, 'SELECT CAST(' + AppDbQuoteIdent(IDColumn) + ' AS TEXT), ' +
+            AppDbQuoteIdent(NameColumn) + ' FROM ' + AppDbQuoteIdent(Table));
+          try
+            for I := 0 to Rows.Count - 1 do
+            begin
+              Parts := Rows[I].Split([#9]);
+              if Length(Parts) < 2 then Continue;
+              RowID := Trim(Parts[0]); RowName := Trim(Parts[1]);
+              if (RowName <> '') and Matches(RowID) then Exit(RowName);
+            end;
+          finally
+            Rows.Free;
+          end;
+        end;
+end;
+
+function AppDbDownload(const AHost: string; APort: Word): string;
+var
+  FTP: TIdFTP;
+  FileName: string;
+begin
+  Result := '';
+  FileName := TPath.Combine(TPath.GetTempPath, 'PS4Tools_app_' + IntToStr(GetTickCount) + '.db');
+  FTP := TIdFTP.Create(nil);
+  try
+    FTP.Host := Trim(AHost); FTP.Port := APort; FTP.Username := 'anonymous';
+    FTP.Password := 'anonymous@'; FTP.Passive := True; FTP.TransferType := ftBinary;
+    FTP.ConnectTimeout := 5000; FTP.ReadTimeout := 15000; FTP.Connect;
+    FTP.Get('/system_data/priv/mms/app.db', FileName, True);
+    Result := FileName;
+  finally
+    if FTP.Connected then FTP.Disconnect;
+    FTP.Free;
+  end;
+end;
+
+function NormalizeGameTitle(const ATitle: string): string;
+const
+  LOWER_WORDS: array[0..15] of string = (
+    'a', 'an', 'and', 'at', 'by', 'da', 'das', 'de', 'do', 'dos',
+    'for', 'in', 'of', 'on', 'the', 'to');
+var
+  Text: string;
+  WordText: string;
+  I, StartPos: Integer;
+  IsFirstWord: Boolean;
+  KeepLower: Boolean;
+begin
+  Text := LowerCase(Trim(ATitle));
+  Result := '';
+  I := 1;
+  IsFirstWord := True;
+  while I <= Length(Text) do
+  begin
+    if CharInSet(Text[I], ['a'..'z', 'A'..'Z', #$00C0..#$00FF]) then
+    begin
+      StartPos := I;
+      while (I <= Length(Text)) and
+        CharInSet(Text[I], ['a'..'z', 'A'..'Z', #$00C0..#$00FF]) do
+        Inc(I);
+      WordText := Copy(Text, StartPos, I - StartPos);
+      KeepLower := False;
+      for StartPos := Low(LOWER_WORDS) to High(LOWER_WORDS) do
+        if SameText(WordText, LOWER_WORDS[StartPos]) then
+        begin
+          KeepLower := True;
+          Break;
+        end;
+      if (not IsFirstWord) and KeepLower then
+        WordText := LowerCase(WordText)
+      else if WordText <> '' then
+        WordText := UpperCase(WordText[1]) + LowerCase(Copy(WordText, 2, MaxInt));
+      Result := Result + WordText;
+      IsFirstWord := False;
+    end
+    else
+    begin
+      Result := Result + Text[I];
+      Inc(I);
+    end;
+  end;
+end;
+
+function ReadPS4UsernameFiles(const AHost: string; APort: Word;
+  const AUserIDs: TArray<string>): TArray<string>;
+var
+  FTP: TIdFTP;
+  TempFile: string;
+  Lines: TStringList;
+  I: Integer;
+begin
+  SetLength(Result, Length(AUserIDs));
+  FTP := TIdFTP.Create(nil);
+  try
+    FTP.Host := Trim(AHost);
+    FTP.Port := APort;
+    FTP.Username := 'anonymous';
+    FTP.Password := 'anonymous@';
+    FTP.Passive := True;
+    FTP.TransferType := ftBinary;
+    FTP.ConnectTimeout := 5000;
+    FTP.ReadTimeout := 15000;
+    FTP.Connect;
+    for I := 0 to High(AUserIDs) do
+    begin
+      TempFile := TPath.Combine(TPath.GetTempPath,
+        'PS4Tools_user_' + IntToStr(GetTickCount) + '_' + IntToStr(I) + '.dat');
+      try
+        FTP.Get('/user/home/' + AUserIDs[I] + '/username.dat', TempFile, True);
+        Lines := TStringList.Create;
+        try
+          Lines.LoadFromFile(TempFile, TEncoding.UTF8);
+          if Lines.Count > 0 then
+            Result[I] := Trim(Lines[0]);
+        finally
+          Lines.Free;
+        end;
+      except
+        Result[I] := '';
+      end;
+      if TFile.Exists(TempFile) then
+        TFile.Delete(TempFile);
+    end;
+  finally
+    if FTP.Connected then FTP.Disconnect;
+    FTP.Free;
+  end;
+end;
+
+function ResolvePS4UserDisplayNamesFromAppDb(const AHost: string;
+  APort: Word; const AUserIDs: TArray<string>): TArray<TPS4UserInfo>;
+var
+  DbFile: string;
+  Db: sqlite3;
+  Code, I: Integer;
+  Utf8Name: UTF8String;
+  UserNames: TArray<string>;
+begin
+  SetLength(Result, Length(AUserIDs));
+  if Length(AUserIDs) = 0 then Exit;
+  UserNames := ReadPS4UsernameFiles(AHost, APort, AUserIDs);
+  for I := 0 to High(AUserIDs) do
+  begin
+    Result[I].UserID := AUserIDs[I];
+    Result[I].DisplayName := UserNames[I];
+  end;
+
+  try
+    DbFile := AppDbDownload(AHost, APort);
+  except
+    Exit;
+  end;
+  Db := nil;
+  try
+    if GetModuleHandle('sqlite3.dll') = 0 then
+      LoadLibrary(PChar(TPath.Combine(ExtractFileDir(ParamStr(0)), 'sqlite3.dll')));
+    Utf8Name := UTF8String(DbFile);
+    Code := sqlite3_open_v2(PAnsiChar(Utf8Name), Db, SQLITE_OPEN_READONLY or SQLITE_OPEN_FULLMUTEX, nil);
+    if Code <> SQLITE_OK then
+      raise Exception.CreateFmt('Não foi possível abrir o app.db do PS4 (%d).', [Code]);
+    try
+      for I := 0 to High(AUserIDs) do
+      begin
+        if Result[I].DisplayName = '' then
+          Result[I].DisplayName := AppDbReadDisplayName(Db, AUserIDs[I]);
+        if Result[I].DisplayName = '' then Result[I].DisplayName := AUserIDs[I];
+      end;
+    finally
+      sqlite3_close(Db);
+      Db := nil;
+    end;
+  finally
+    if Db <> nil then sqlite3_close(Db);
+    if TFile.Exists(DbFile) then TFile.Delete(DbFile);
+  end;
+end;
+
+function ResolvePS4TitleNamesFromAppDb(const AHost: string;
+  APort: Word): TArray<TPS4TitleInfo>;
+var
+  DbFile: string;
+  Db: sqlite3;
+  Code, I, J: Integer;
+  Utf8Name: UTF8String;
+  Tables, Rows: TStringList;
+  Parts: TArray<string>;
+  Title: TPS4TitleInfo;
+begin
+  SetLength(Result, 0);
+  DbFile := '';
+  Db := nil;
+  try
+    DbFile := AppDbDownload(AHost, APort);
+    if GetModuleHandle('sqlite3.dll') = 0 then
+      LoadLibrary(PChar(TPath.Combine(ExtractFileDir(ParamStr(0)), 'sqlite3.dll')));
+    Utf8Name := UTF8String(DbFile);
+    Code := sqlite3_open_v2(PAnsiChar(Utf8Name), Db,
+      SQLITE_OPEN_READONLY or SQLITE_OPEN_FULLMUTEX, nil);
+    if Code <> SQLITE_OK then
+      Exit;
+
+    Tables := AppDbQuery(Db,
+      'SELECT name FROM sqlite_master WHERE type = ''table'' AND name LIKE ''tbl_appbrowse_%''');
+    try
+      for I := 0 to Tables.Count - 1 do
+      begin
+        Rows := AppDbQuery(Db, 'SELECT titleId, titleName FROM ' +
+          AppDbQuoteIdent(Tables[I]));
+        try
+          for J := 0 to Rows.Count - 1 do
+          begin
+            Parts := Rows[J].Split([#9]);
+            if (Length(Parts) < 2) or (Trim(Parts[0]) = '') or
+               (Trim(Parts[1]) = '') then
+              Continue;
+            Title.TitleID := UpperCase(Trim(Parts[0]));
+            Title.TitleName := NormalizeGameTitle(Trim(Parts[1]));
+            SetLength(Result, Length(Result) + 1);
+            Result[High(Result)] := Title;
+          end;
+        finally
+          Rows.Free;
+        end;
+      end;
+    finally
+      Tables.Free;
+    end;
+  finally
+    if Db <> nil then sqlite3_close(Db);
+    if (DbFile <> '') and TFile.Exists(DbFile) then TFile.Delete(DbFile);
+  end;
+end;
+
+const
+  PS4_FTP_USER = 'anonymous';
+  PS4_FTP_PASS = 'anonymous@';
+  APOLLO_FAKEUSB_ACCOUNT_ID = '0000000000000000';
+  PS4_USER_ROOT = '/user';
+
+function LooksLikePS4TitleID(const S: string): Boolean;
+var
+  T: string;
+  I: Integer;
+begin
+  T := UpperCase(Trim(S));
+  Result := (Length(T) = 9) and (Copy(T, 1, 4) = 'CUSA');
+  if not Result then Exit;
+  for I := 5 to 9 do
+    if not CharInSet(T[I], ['0'..'9']) then
+      Exit(False);
+end;
+
+function LooksLikePS4UserID(const S: string): Boolean;
+var
+  T: string;
+  I: Integer;
+begin
+  T := LowerCase(Trim(S));
+  Result := Length(T) = 8;
+  if not Result then Exit;
+  for I := 1 to Length(T) do
+    if not CharInSet(T[I], ['0'..'9', 'a'..'f']) then
+      Exit(False);
+end;
+
+function NormalizeRemotePath(const S: string): string;
+begin
+  Result := StringReplace(S, '\', '/', [rfReplaceAll]);
+  while Pos('//', Result) > 0 do
+    Result := StringReplace(Result, '//', '/', [rfReplaceAll]);
+  if (Result = '') or (Result[1] <> '/') then
+    Result := '/' + Result;
+  if (Length(Result) > 1) and (Result[Length(Result)] = '/') then
+    Delete(Result, Length(Result), 1);
+end;
+
+function RemoteCombine(const ABase, AName: string): string;
+begin
+  Result := NormalizeRemotePath(IncludeTrailingPathDelimiter(
+    StringReplace(ABase, '/', '\', [rfReplaceAll])) + AName);
+end;
+
+function RemoteDirName(const ARemoteFile: string): string;
+var
+  P: Integer;
+begin
+  Result := NormalizeRemotePath(ARemoteFile);
+  P := LastDelimiter('/', Result);
+  if P > 1 then
+    Result := Copy(Result, 1, P - 1)
+  else
+    Result := '/';
+end;
+
+function RemoteFileName(const ARemoteFile: string): string;
+var
+  P: Integer;
+begin
+  Result := NormalizeRemotePath(ARemoteFile);
+  P := LastDelimiter('/', Result);
+  if P > 0 then
+    Result := Copy(Result, P + 1, MaxInt);
+end;
+
+function ExeTempRoot(const ANamePrefix: string): string;
+begin
+  Result := TPath.Combine(ExtractFileDir(ParamStr(0)), 'tmp');
+  Result := TPath.Combine(Result, ANamePrefix + '_' +
+    FormatDateTime('yyyymmdd_hhnnss_zzz', Now));
+end;
+
+function IsPS4SaveImageFile(const AName: string; out ASaveName: string): Boolean;
+const
+  SDIMG_PREFIX = 'sdimg_';
+begin
+  Result := False;
+  ASaveName := '';
+  if not SameText(Copy(AName, 1, Length(SDIMG_PREFIX)), SDIMG_PREFIX) then Exit;
+
+  ASaveName := Copy(AName, Length(SDIMG_PREFIX) + 1, MaxInt);
+  Result := (ASaveName <> '') and
+            not SameText(Copy(ASaveName, 1, 7), 'sce_bu_');
+end;
+
+function ApolloSaveFolderName(const ASave: TPS4SaveGame): string;
+const
+  INVALID_CHARS: TSysCharSet = ['\', '/', ':', '*', '?', '"', '<', '>', '|'];
+var
+  I: Integer;
+begin
+  Result := ASave.UserID + '_' + ASave.TitleID;
+  if Trim(ASave.SaveName) <> '' then
+    Result := Result + '_' + ASave.SaveName;
+  for I := 1 to Length(Result) do
+    if CharInSet(Result[I], INVALID_CHARS) then
+      Result[I] := '_';
+end;
+
+function ConnectFTP(const AHost: string; APort: Word): TIdFTP;
+begin
+  Result := TIdFTP.Create(nil);
+  try
+    Result.Host := Trim(AHost);
+    Result.Port := APort;
+    Result.Username := PS4_FTP_USER;
+    Result.Password := PS4_FTP_PASS;
+    Result.Passive := True;
+    Result.TransferType := ftBinary;
+    Result.ConnectTimeout := 10000;
+    Result.ReadTimeout := 30000;
+    Result.Connect;
+  except
+    Result.Free;
+    raise;
+  end;
+end;
+
+function TryListDir(AFTP: TIdFTP; const ARemoteDir: string): Boolean;
+begin
+  try
+    AFTP.DirectoryListing.Clear;
+    AFTP.ChangeDir(ARemoteDir);
+    AFTP.List('', True);
+    Result := True;
+  except
+    Result := False;
+  end;
+end;
+
+function LE32(const B: TBytes; O: Integer): UInt32; inline;
+begin
+  Result := UInt32(B[O]) or (UInt32(B[O+1]) shl 8) or
+            (UInt32(B[O+2]) shl 16) or (UInt32(B[O+3]) shl 24);
+end;
+
+function LE16(const B: TBytes; O: Integer): Word; inline;
+begin
+  Result := Word(B[O]) or (Word(B[O+1]) shl 8);
+end;
+
+procedure PutLE32(var B: TBytes; O: Integer; V: UInt32); inline;
+begin
+  B[O] := Byte(V and $FF);
+  B[O+1] := Byte((V shr 8) and $FF);
+  B[O+2] := Byte((V shr 16) and $FF);
+  B[O+3] := Byte((V shr 24) and $FF);
+end;
+
+function TryHexUserIDToUInt32(const AUserID: string; out AValue: UInt32): Boolean;
+var
+  N: UInt64;
+begin
+  Result := TryStrToUInt64('$' + Trim(AUserID), N) and (N <= High(UInt32));
+  if Result then
+    AValue := UInt32(N)
+  else
+    AValue := 0;
+end;
+
+function TryFindSfoEntry(const ASfo: TBytes; const AKey: string; out ADataOffset,
+  ADataLen, ADataMaxLen: Integer): Boolean;
+const
+  SFO_MAGIC = $46535000;
+var
+  KeyTblOff, DataTblOff, Count: UInt32;
+  I, EntryBase: Integer;
+  KeyOff: Word;
+  DataLen, DataMaxLen, DataOff, KO: UInt32;
+  KStr: string;
+begin
+  Result := False;
+  ADataOffset := 0;
+  ADataLen := 0;
+  ADataMaxLen := 0;
+  if Length(ASfo) < 20 then Exit;
+  if LE32(ASfo, 0) <> SFO_MAGIC then Exit;
+  KeyTblOff := LE32(ASfo, 8);
+  DataTblOff := LE32(ASfo, 12);
+  Count := LE32(ASfo, 16);
+
+  for I := 0 to Integer(Count) - 1 do
+  begin
+    EntryBase := 20 + I * 16;
+    if EntryBase + 16 > Length(ASfo) then Break;
+    KeyOff := LE16(ASfo, EntryBase);
+    DataLen := LE32(ASfo, EntryBase + 4);
+    DataMaxLen := LE32(ASfo, EntryBase + 8);
+    DataOff := LE32(ASfo, EntryBase + 12);
+
+    KO := KeyTblOff + KeyOff;
+    KStr := '';
+    while (KO < UInt32(Length(ASfo))) and (ASfo[KO] <> 0) do
+    begin
+      KStr := KStr + Char(ASfo[KO]);
+      Inc(KO);
+    end;
+
+    if SameText(KStr, AKey) then
+    begin
+      ADataOffset := Integer(DataTblOff + DataOff);
+      ADataLen := Integer(DataLen);
+      ADataMaxLen := Integer(DataMaxLen);
+      Result := (ADataOffset >= 0) and (ADataOffset < Length(ASfo));
+      Exit;
+    end;
+  end;
+end;
+
+function SfoGetString(const ASfo: TBytes; const AKey: string): string;
+const
+  SFO_MAGIC = $46535000;
+var
+  KeyTblOff, DataTblOff, Count: UInt32;
+  I, EntryBase, Len: Integer;
+  KeyOff: Word;
+  DataLen: UInt32;
+  DataOff, VStart, KO: UInt32;
+  KStr: string;
+  ValueBytes: TBytes;
+begin
+  Result := '';
+  if Length(ASfo) < 20 then Exit;
+  if LE32(ASfo, 0) <> SFO_MAGIC then Exit;
+  KeyTblOff := LE32(ASfo, 8);
+  DataTblOff := LE32(ASfo, 12);
+  Count := LE32(ASfo, 16);
+
+  for I := 0 to Integer(Count) - 1 do
+  begin
+    EntryBase := 20 + I * 16;
+    if EntryBase + 16 > Length(ASfo) then Break;
+    KeyOff := LE16(ASfo, EntryBase);
+    DataLen := LE32(ASfo, EntryBase + 4);
+    DataOff := LE32(ASfo, EntryBase + 12);
+
+    KO := KeyTblOff + KeyOff;
+    KStr := '';
+    while (KO < UInt32(Length(ASfo))) and (ASfo[KO] <> 0) do
+    begin
+      KStr := KStr + Char(ASfo[KO]);
+      Inc(KO);
+    end;
+
+    if SameText(KStr, AKey) then
+    begin
+      VStart := DataTblOff + DataOff;
+      Len := 0;
+      while (VStart + UInt32(Len) < UInt32(Length(ASfo))) and
+            (ASfo[VStart + UInt32(Len)] <> 0) and
+            (Len < Integer(DataLen)) do
+        Inc(Len);
+      if Len <= 0 then Exit;
+      SetLength(ValueBytes, Len);
+      Move(ASfo[VStart], ValueBytes[0], Len);
+      Result := TEncoding.UTF8.GetString(ValueBytes);
+      Exit;
+    end;
+  end;
+end;
+
+function TryReadRemoteSfo(AFTP: TIdFTP; const ARemoteFile: string; out ASfo: TBytes): Boolean;
+var
+  MS: TMemoryStream;
+  DirName: string;
+  FileName: string;
+  I: Integer;
+  Found: Boolean;
+begin
+  Result := False;
+  SetLength(ASfo, 0);
+
+  DirName := RemoteDirName(ARemoteFile);
+  FileName := RemoteFileName(ARemoteFile);
+  Found := False;
+  if (DirName = '') or (FileName = '') or not TryListDir(AFTP, DirName) then Exit;
+  for I := 0 to AFTP.DirectoryListing.Count - 1 do
+    if (AFTP.DirectoryListing[I].ItemType <> ditDirectory) and
+       SameText(AFTP.DirectoryListing[I].FileName, FileName) then
+    begin
+      Found := True;
+      Break;
+    end;
+  if not Found then Exit;
+
+  MS := TMemoryStream.Create;
+  try
+    try
+      AFTP.Get(ARemoteFile, MS, False);
+      if (MS.Size <= 0) or (MS.Size > 1024 * 1024) then Exit;
+      MS.Position := 0;
+      SetLength(ASfo, MS.Size);
+      MS.ReadBuffer(ASfo[0], MS.Size);
+      Result := True;
+    except
+      Result := False;
+    end;
+  finally
+    MS.Free;
+  end;
+end;
+
+function TryReadTitleFromSfo(AFTP: TIdFTP; const ARemoteFile: string): string;
+var
+  Sfo: TBytes;
+begin
+  Result := '';
+  if TryReadRemoteSfo(AFTP, ARemoteFile, Sfo) then
+  begin
+    Result := Trim(SfoGetString(Sfo, 'TITLE'));
+    if Result = '' then
+      Result := Trim(SfoGetString(Sfo, 'SAVEDATA_TITLE'));
+    if Result = '' then
+      Result := Trim(SfoGetString(Sfo, 'SUB_TITLE'));
+  end;
+end;
+
+function TryReadTitleFromSaveFolder(AFTP: TIdFTP; const ASavePath: string): string;
+var
+  Names: TStringList;
+  IsDir: TList<Boolean>;
+  I: Integer;
+  Name, RemotePath: string;
+begin
+  Result := TryReadTitleFromSfo(AFTP, ASavePath + '/sce_sys/param.sfo');
+  if Result <> '' then Exit;
+
+  Names := TStringList.Create;
+  IsDir := TList<Boolean>.Create;
+  try
+    if not TryListDir(AFTP, ASavePath) then Exit;
+    for I := 0 to AFTP.DirectoryListing.Count - 1 do
+    begin
+      Name := AFTP.DirectoryListing[I].FileName;
+      if (Name = '.') or (Name = '..') then Continue;
+      Names.Add(Name);
+      IsDir.Add(AFTP.DirectoryListing[I].ItemType = ditDirectory);
+    end;
+
+    for I := 0 to Names.Count - 1 do
+    begin
+      if not IsDir[I] then Continue;
+      RemotePath := ASavePath + '/' + Names[I] + '/sce_sys/param.sfo';
+      Result := TryReadTitleFromSfo(AFTP, RemotePath);
+      if Result <> '' then Exit;
+    end;
+  finally
+    IsDir.Free;
+    Names.Free;
+  end;
+end;
+
+function TryReadSaveGameTitle(AFTP: TIdFTP; const ATitleID, ASavePath: string): string;
+begin
+  Result := TryReadTitleFromSfo(AFTP, PS4_USER_ROOT + '/appmeta/' + ATitleID + '/param.sfo');
+  if Result <> '' then Exit;
+
+  Result := TryReadTitleFromSfo(AFTP, PS4_USER_ROOT + '/app/' + ATitleID + '/sce_sys/param.sfo');
+  if Result <> '' then Exit;
+
+  Result := TryReadTitleFromSfo(AFTP, PS4_USER_ROOT + '/app/' + ATitleID + '/param.sfo');
+  if Result <> '' then Exit;
+
+  Result := TryReadTitleFromSaveFolder(AFTP, ASavePath);
+end;
+
+function TryGetConsoleName(const AHost: string): string;
+begin
+  Result := 'PS4 ' + AHost;
+end;
+
+function IPPrefix(const AIP: string): string;
+var
+  P: Integer;
+begin
+  Result := Trim(AIP);
+  P := LastDelimiter('.', Result);
+  if P > 0 then
+    Result := Copy(Result, 1, P);
+end;
+
+function DiscoverPS4Consoles(const ABaseIP: string; APort: Word;
+  ALog: TPS4SaveLogEvent): TArray<TPS4ConsoleInfo>;
+var
+  Prefix, Host: string;
+  I: Integer;
+  TCP: TIdTCPClient;
+  FTP: TIdFTP;
+  Item: TPS4ConsoleInfo;
+begin
+  SetLength(Result, 0);
+  Prefix := IPPrefix(ABaseIP);
+  if Prefix = '' then Exit;
+
+  TCP := TIdTCPClient.Create(nil);
+  try
+    TCP.ConnectTimeout := 180;
+    TCP.ReadTimeout := 180;
+    for I := 1 to 254 do
+    begin
+      Host := Prefix + IntToStr(I);
+      if Assigned(ALog) and ((I = 1) or (I mod 32 = 0)) then
+        ALog('Buscando consoles na rede: ' + Host);
+
+      try
+        TCP.Host := Host;
+        TCP.Port := APort;
+        TCP.Connect;
+        TCP.Disconnect;
+
+        FTP := ConnectFTP(Host, APort);
+        try
+          SetLength(Result, Length(Result) + 1);
+          Item.IP := Host;
+          Item.Name := TryGetConsoleName(Host);
+          Result[High(Result)] := Item;
+          if Assigned(ALog) then
+            ALog('Encontrado: ' + Item.Name);
+        finally
+          if FTP.Connected then FTP.Disconnect;
+          FTP.Free;
+        end;
+      except
+        try
+          if TCP.Connected then TCP.Disconnect;
+        except
+        end;
+      end;
+    end;
+  finally
+    TCP.Free;
+  end;
+end;
+
+function FindUserDisplayName(const AUsers: TArray<TPS4SaveUser>;
+  const AUserID: string): string;
+var
+  User: TPS4SaveUser;
+begin
+  Result := '';
+  for User in AUsers do
+    if SameText(User.UserID, AUserID) then
+      Exit(User.DisplayName);
+end;
+
+function PS4SaveGameTitle(const ASave: TPS4SaveGame): string;
+begin
+  Result := Trim(ASave.Title);
+  if Result = '' then
+    Result := ASave.TitleID;
+end;
+
+function PS4SaveDisplayText(const ASave: TPS4SaveGame): string;
+var
+  DateText: string;
+begin
+  if ASave.ModifiedAt > 0 then
+    DateText := FormatDateTime('yyyy.mm.dd - hh:nn:ss', ASave.ModifiedAt)
+  else
+    DateText := 'sem data - sem hora';
+
+  Result := Format('%s - %s - %s  ||  %s  (usuario %s (%s))',
+    [PS4SaveGameTitle(ASave), DateText, ASave.TitleID, ASave.SaveName,
+     ASave.UserDisplayName, ASave.UserID]);
+end;
+
+function ComparePS4SaveGames(const Left, Right: TPS4SaveGame): Integer;
+begin
+  Result := CompareText(PS4SaveGameTitle(Left), PS4SaveGameTitle(Right));
+  if Result <> 0 then Exit;
+
+  if Left.ModifiedAt > Right.ModifiedAt then
+    Exit(-1);
+  if Left.ModifiedAt < Right.ModifiedAt then
+    Exit(1);
+
+  Result := CompareText(Left.TitleID, Right.TitleID);
+  if Result <> 0 then Exit;
+
+  Result := CompareText(Left.SaveName, Right.SaveName);
+end;
+
+function ListPS4Users(const AHost: string; APort: Word): TArray<TPS4SaveUser>;
+var
+  FTP: TIdFTP;
+  AppDbUsers: TArray<TPS4UserInfo>;
+  AppDbUser: TPS4UserInfo;
+  User: TPS4SaveUser;
+  UserIDs: TArray<string>;
+  I: Integer;
+begin
+  SetLength(Result, 0);
+  SetLength(UserIDs, 0);
+
+  FTP := ConnectFTP(AHost, APort);
+  try
+    if TryListDir(FTP, '/user/home') then
+      for I := 0 to FTP.DirectoryListing.Count - 1 do
+      begin
+        if (FTP.DirectoryListing[I].FileName = '.') or
+           (FTP.DirectoryListing[I].FileName = '..') then Continue;
+        if (FTP.DirectoryListing[I].ItemType = ditDirectory) and
+           LooksLikePS4UserID(FTP.DirectoryListing[I].FileName) then
+        begin
+          SetLength(UserIDs, Length(UserIDs) + 1);
+          UserIDs[High(UserIDs)] := FTP.DirectoryListing[I].FileName;
+        end;
+      end;
+  finally
+    if FTP.Connected then FTP.Disconnect;
+    FTP.Free;
+  end;
+
+  try
+    AppDbUsers := ResolvePS4UserDisplayNamesFromAppDb(AHost, APort, UserIDs);
+  except
+    SetLength(AppDbUsers, 0);
+  end;
+
+  SetLength(Result, Length(UserIDs));
+  for I := 0 to High(UserIDs) do
+  begin
+    User.UserID := UserIDs[I];
+    User.DisplayName := User.UserID;
+    for AppDbUser in AppDbUsers do
+      if SameText(AppDbUser.UserID, User.UserID) then
+      begin
+        if Trim(AppDbUser.DisplayName) <> '' then
+          User.DisplayName := AppDbUser.DisplayName;
+        Break;
+      end;
+    Result[I] := User;
+  end;
+end;
+
+function ListPS4SaveGamesInternal(const AHost: string; APort: Word;
+  const AOnlyUserID: string): TArray<TPS4SaveGame>;
+var
+  FTP: TIdFTP;
+  Users, Titles, SaveNames: TStringList;
+  SaveUsers: TArray<TPS4SaveUser>;
+  AppDbTitles: TArray<TPS4TitleInfo>;
+  TitleMap: TDictionary<string, string>;
+  AppDbTitle: TPS4TitleInfo;
+  I, J, K: Integer;
+  ModifiedAt: TDateTime;
+  UserID, TitleID, SaveRoot, TitlePath, SaveName, TitleName: string;
+  Save: TPS4SaveGame;
+begin
+  SetLength(Result, 0);
+  Users := TStringList.Create;
+  Titles := TStringList.Create;
+  SaveNames := TStringList.Create;
+  TitleMap := TDictionary<string, string>.Create;
+  FTP := ConnectFTP(AHost, APort);
+  try
+    SaveUsers := ListPS4Users(AHost, APort);
+    if Trim(AOnlyUserID) <> '' then
+    begin
+      if LooksLikePS4UserID(AOnlyUserID) then
+        Users.Add(LowerCase(Trim(AOnlyUserID)));
+    end
+    else
+      for I := 0 to High(SaveUsers) do
+        Users.Add(SaveUsers[I].UserID);
+
+    try
+      AppDbTitles := ResolvePS4TitleNamesFromAppDb(AHost, APort);
+      for AppDbTitle in AppDbTitles do
+        if (Trim(AppDbTitle.TitleID) <> '') and (Trim(AppDbTitle.TitleName) <> '') and
+           not TitleMap.ContainsKey(UpperCase(Trim(AppDbTitle.TitleID))) then
+          TitleMap.Add(UpperCase(Trim(AppDbTitle.TitleID)), Trim(AppDbTitle.TitleName));
+    except
+      TitleMap.Clear;
+    end;
+
+    for I := 0 to Users.Count - 1 do
+    begin
+      UserID := Users[I];
+      if not LooksLikePS4UserID(UserID) then Continue;
+      begin
+        SaveRoot := PS4_USER_ROOT + '/home/' + UserID + '/savedata';
+        Titles.Clear;
+        if not TryListDir(FTP, SaveRoot) then Continue;
+
+        for J := 0 to FTP.DirectoryListing.Count - 1 do
+        begin
+          if FTP.DirectoryListing[J].ItemType <> ditDirectory then Continue;
+          TitleID := UpperCase(FTP.DirectoryListing[J].FileName);
+          if not LooksLikePS4TitleID(TitleID) then Continue;
+          Titles.Add(TitleID);
+        end;
+
+        for J := 0 to Titles.Count - 1 do
+        begin
+          TitleID := Titles[J];
+          TitlePath := SaveRoot + '/' + TitleID;
+          TitleName := '';
+          if TitleMap.ContainsKey(UpperCase(TitleID)) then
+            TitleName := TitleMap[UpperCase(TitleID)];
+          if TitleName = '' then
+            TitleName := ResolveGameTitleOnline(TitleID);
+          if TitleName = '' then
+            TitleName := TitleID;
+          SaveNames.Clear;
+
+          if TryListDir(FTP, TitlePath) then
+            for K := 0 to FTP.DirectoryListing.Count - 1 do
+              if (FTP.DirectoryListing[K].ItemType <> ditDirectory) and
+                 IsPS4SaveImageFile(FTP.DirectoryListing[K].FileName, SaveName) then
+                SaveNames.AddObject(SaveName,
+                  TObject(NativeInt(DateTimeToFileDate(FTP.DirectoryListing[K].ModifiedDate))));
+
+          if SaveNames.Count = 0 then
+            Continue;
+
+          for K := 0 to SaveNames.Count - 1 do
+          begin
+            SaveName := SaveNames[K];
+            ModifiedAt := 0;
+            if SaveNames.Objects[K] <> nil then
+              ModifiedAt := FileDateToDateTime(Integer(NativeInt(SaveNames.Objects[K])));
+            SetLength(Result, Length(Result) + 1);
+            Save.TitleID := TitleID;
+            Save.SaveName := SaveName;
+            Save.UserID := UserID;
+            Save.ModifiedAt := ModifiedAt;
+            Save.UserDisplayName := FindUserDisplayName(SaveUsers, UserID);
+            if Save.UserDisplayName = '' then
+              Save.UserDisplayName := UserID;
+            Save.RemotePath := TitlePath;
+            Save.RemoteImagePath := TitlePath + '/sdimg_' + SaveName;
+            Save.RemoteMetaPath := TitlePath + '/' + SaveName + '.bin';
+            Save.Title := TitleName;
+            Result[High(Result)] := Save;
+          end;
+        end;
+      end;
+    end;
+
+    TArray.Sort<TPS4SaveGame>(Result, TComparer<TPS4SaveGame>.Construct(ComparePS4SaveGames));
+  finally
+    if FTP.Connected then FTP.Disconnect;
+    FTP.Free;
+    SaveNames.Free;
+    Titles.Free;
+    Users.Free;
+    TitleMap.Free;
+  end;
+end;
+
+function ListPS4SaveGames(const AHost: string; APort: Word): TArray<TPS4SaveGame>;
+begin
+  Result := ListPS4SaveGamesInternal(AHost, APort, '');
+end;
+
+function ListPS4SaveGamesForUser(const AHost: string; APort: Word;
+  const AUserID: string): TArray<TPS4SaveGame>;
+begin
+  Result := ListPS4SaveGamesInternal(AHost, APort, AUserID);
+end;
+
+procedure EnsureRemoteDir(AFTP: TIdFTP; const APath: string);
+var
+  Part: string;
+  CurrentPath: string;
+begin
+  CurrentPath := '';
+  for Part in NormalizeRemotePath(APath).Split(['/']) do
+  begin
+    if Part = '' then Continue;
+    CurrentPath := CurrentPath + '/' + Part;
+    try
+      AFTP.ChangeDir(CurrentPath);
+    except
+      try
+        AFTP.MakeDir(CurrentPath);
+      except
+        // Pode falhar se a pasta ja existir ou se o FTP responder tarde;
+        // a verificacao abaixo decide se realmente e erro.
+      end;
+      AFTP.ChangeDir(CurrentPath);
+    end;
+  end;
+end;
+
+procedure DownloadDir(AFTP: TIdFTP; const ARemoteDir, ALocalDir: string;
+  ALog: TPS4SaveLogEvent);
+var
+  Names: TStringList;
+  IsDir: TList<Boolean>;
+  I: Integer;
+  RemoteName, RemotePath, LocalPath: string;
+begin
+  ForceDirectories(ALocalDir);
+  Names := TStringList.Create;
+  IsDir := TList<Boolean>.Create;
+  try
+    if not TryListDir(AFTP, ARemoteDir) then Exit;
+    for I := 0 to AFTP.DirectoryListing.Count - 1 do
+    begin
+      RemoteName := AFTP.DirectoryListing[I].FileName;
+      if (RemoteName = '.') or (RemoteName = '..') then Continue;
+      Names.Add(RemoteName);
+      IsDir.Add(AFTP.DirectoryListing[I].ItemType = ditDirectory);
+    end;
+
+    for I := 0 to Names.Count - 1 do
+    begin
+      RemotePath := RemoteCombine(ARemoteDir, Names[I]);
+      LocalPath := TPath.Combine(ALocalDir, Names[I]);
+      if IsDir[I] then
+        DownloadDir(AFTP, RemotePath, LocalPath, ALog)
+      else
+      begin
+        if Assigned(ALog) then ALog('Baixando ' + RemotePath);
+        AFTP.Get(RemotePath, LocalPath, True);
+      end;
+    end;
+  finally
+    IsDir.Free;
+    Names.Free;
+  end;
+end;
+
+procedure DownloadRequiredFile(AFTP: TIdFTP; const ARemoteFile, ALocalDir: string;
+  ALog: TPS4SaveLogEvent);
+var
+  LocalPath: string;
+begin
+  if Trim(ARemoteFile) = '' then
+    raise Exception.Create('Arquivo remoto do save nao informado.');
+  ForceDirectories(ALocalDir);
+  LocalPath := TPath.Combine(ALocalDir, RemoteFileName(ARemoteFile));
+  try
+    if Assigned(ALog) then
+      ALog('Baixando ' + ARemoteFile);
+    AFTP.Get(ARemoteFile, LocalPath, False);
+  except
+    on E: Exception do
+      raise Exception.Create('Nao foi possivel baixar ' + ARemoteFile + ': ' + E.Message);
+  end;
+
+  if not TFile.Exists(LocalPath) then
+    raise Exception.Create('Download nao criou o arquivo local: ' + LocalPath);
+end;
+
+function RemoteFileExists(AFTP: TIdFTP; const ARemoteFile: string): Boolean;
+var
+  DirName: string;
+  FileName: string;
+  I: Integer;
+begin
+  Result := False;
+  if Trim(ARemoteFile) = '' then Exit;
+
+  DirName := RemoteDirName(ARemoteFile);
+  FileName := RemoteFileName(ARemoteFile);
+  if FileName = '' then Exit;
+
+  if not TryListDir(AFTP, DirName) then Exit;
+  for I := 0 to AFTP.DirectoryListing.Count - 1 do
+    if (AFTP.DirectoryListing[I].ItemType <> ditDirectory) and
+       SameText(AFTP.DirectoryListing[I].FileName, FileName) then
+      Exit(True);
+end;
+
+function FindEncryptedSaveRemoteFiles(AFTP: TIdFTP; const ASave: TPS4SaveGame;
+  out AImagePath, AMetaPath, AAttempted: string): Boolean;
+var
+  BasePath: string;
+  ImagePath: string;
+  MetaPath: string;
+
+  procedure AddAttempt(const APath: string);
+  begin
+    if AAttempted <> '' then
+      AAttempted := AAttempted + ', ';
+    AAttempted := AAttempted + APath;
+  end;
+
+  function TryPair(const ABasePath: string): Boolean;
+  begin
+    ImagePath := ABasePath + '/sdimg_' + ASave.SaveName;
+    MetaPath := ABasePath + '/' + ASave.SaveName + '.bin';
+    AddAttempt(ABasePath);
+    Result := RemoteFileExists(AFTP, ImagePath) and RemoteFileExists(AFTP, MetaPath);
+    if Result then
+    begin
+      AImagePath := ImagePath;
+      AMetaPath := MetaPath;
+    end;
+  end;
+
+begin
+  Result := False;
+  AImagePath := '';
+  AMetaPath := '';
+  AAttempted := '';
+
+  if Trim(ASave.SaveName) = '' then Exit;
+
+  if (ASave.RemotePath <> '') and TryPair(ASave.RemotePath) then
+    Exit(True);
+
+  begin
+    BasePath := PS4_USER_ROOT + '/home/' + ASave.UserID + '/savedata/' + ASave.TitleID;
+    if not SameText(NormalizeRemotePath(BasePath), NormalizeRemotePath(ASave.RemotePath)) then
+      if TryPair(BasePath) then
+        Exit(True);
+  end;
+end;
+
+procedure DownloadSaveSlot(AFTP: TIdFTP; const ASave: TPS4SaveGame;
+  const ALocalDir: string; ALog: TPS4SaveLogEvent);
+var
+  ImagePath: string;
+  MetaPath: string;
+  Attempted: string;
+begin
+  if Trim(ASave.SaveName) = '' then
+  begin
+    DownloadDir(AFTP, ASave.RemotePath, ALocalDir, ALog);
+    Exit;
+  end;
+
+  if not FindEncryptedSaveRemoteFiles(AFTP, ASave, ImagePath, MetaPath, Attempted) then
+    raise Exception.Create('Nao encontrei sdimg_' + ASave.SaveName + ' e ' +
+      ASave.SaveName + '.bin no PS4 origem. Caminhos testados: ' + Attempted);
+
+  DownloadRequiredFile(AFTP, ImagePath, ALocalDir, ALog);
+  DownloadRequiredFile(AFTP, MetaPath, ALocalDir, ALog);
+end;
+
+procedure ValidateEncryptedSaveFiles(const ASave: TPS4SaveGame; const ALocalDir: string);
+var
+  ImageFile: string;
+  MetaFile: string;
+begin
+  if Trim(ASave.SaveName) = '' then Exit;
+
+  ImageFile := TPath.Combine(ALocalDir, 'sdimg_' + ASave.SaveName);
+  MetaFile := TPath.Combine(ALocalDir, ASave.SaveName + '.bin');
+
+  if not TFile.Exists(ImageFile) then
+    raise Exception.Create('Arquivo criptografado nao encontrado apos download: ' + ImageFile);
+  if not TFile.Exists(MetaFile) then
+    raise Exception.Create('Arquivo .bin do save nao encontrado apos download: ' + MetaFile);
+end;
+
+procedure CopyLocalDir(const ASourceDir, ADestDir: string);
+var
+  Files, Dirs: TStringDynArray;
+  F, D: string;
+begin
+  ForceDirectories(ADestDir);
+  Files := TDirectory.GetFiles(ASourceDir);
+  for F in Files do
+    TFile.Copy(F, TPath.Combine(ADestDir, ExtractFileName(F)), True);
+
+  Dirs := TDirectory.GetDirectories(ASourceDir);
+  for D in Dirs do
+    CopyLocalDir(D, TPath.Combine(ADestDir, ExtractFileName(D)));
+end;
+
+function FindLocalApolloSaveFolder(const ASave: TPS4SaveGame): string;
+var
+  Drive: Char;
+  Root, ExpectedName: string;
+  Matches: TStringDynArray;
+begin
+  Result := '';
+  ExpectedName := ApolloSaveFolderName(ASave);
+  for Drive := 'A' to 'Z' do
+  begin
+    Root := Drive + ':\PS4\APOLLO';
+    if not TDirectory.Exists(Root) then Continue;
+
+    Matches := TDirectory.GetDirectories(Root, ExpectedName,
+      TSearchOption.soTopDirectoryOnly);
+    if Length(Matches) > 0 then
+      Exit(Matches[0]);
+  end;
+end;
+
+function TryCopyLocalApolloSave(const ASave: TPS4SaveGame; const ALocalDir: string;
+  ALog: TPS4SaveLogEvent): Boolean;
+var
+  SourceDir: string;
+begin
+  SourceDir := FindLocalApolloSaveFolder(ASave);
+  Result := SourceDir <> '';
+  if not Result then Exit;
+
+  if Assigned(ALog) then
+    ALog('Copiando exportacao do Apollo: ' + SourceDir);
+  CopyLocalDir(SourceDir, ALocalDir);
+end;
+
+procedure WriteBackupInfoFile(const ASave: TPS4SaveGame; const ALocalDir: string);
+var
+  Info: TStringList;
+begin
+  ForceDirectories(ALocalDir);
+  Info := TStringList.Create;
+  try
+    Info.Add('PS4 save backup');
+    Info.Add('Title=' + ASave.Title);
+    Info.Add('TitleID=' + ASave.TitleID);
+    Info.Add('SaveName=' + ASave.SaveName);
+    Info.Add('UserID=' + ASave.UserID);
+    Info.Add('RemotePath=' + ASave.RemotePath);
+    Info.Add('');
+    Info.Add('Observacao: se esta pasta contem sce_sys e os arquivos do save,');
+    Info.Add('ela foi copiada da exportacao descriptografada do Apollo em /PS4/APOLLO.');
+    Info.Add('Se contem apenas sdimg_* e *.bin, veio direto do HDD via FTP e continua criptografada pelo PS4.');
+    Info.Add('A descriptografia real e feita pelo Apollo dentro do console.');
+    Info.SaveToFile(TPath.Combine(ALocalDir, 'BACKUP_INFO.txt'), TEncoding.UTF8);
+  finally
+    Info.Free;
+  end;
+end;
+
+procedure UploadDir(AFTP: TIdFTP; const ALocalDir, ARemoteDir: string;
+  ALog: TPS4SaveLogEvent);
+var
+  Files, Dirs: TStringDynArray;
+  F, D: string;
+begin
+  if Assigned(ALog) then
+    ALog('Preparando pasta remota ' + ARemoteDir);
+  EnsureRemoteDir(AFTP, ARemoteDir);
+  Files := TDirectory.GetFiles(ALocalDir);
+  for F in Files do
+  begin
+    if Assigned(ALog) then
+      ALog('Enviando ' + ExtractFileName(F) + ' para ' + ARemoteDir);
+    AFTP.ChangeDir(ARemoteDir);
+    AFTP.Put(F, ExtractFileName(F));
+  end;
+
+  Dirs := TDirectory.GetDirectories(ALocalDir);
+  for D in Dirs do
+    UploadDir(AFTP, D, RemoteCombine(ARemoteDir, ExtractFileName(D)), ALog);
+end;
+
+procedure UploadFileAs(AFTP: TIdFTP; const ALocalFile, ARemoteDir,
+  ARemoteName: string; ALog: TPS4SaveLogEvent);
+begin
+  if not TFile.Exists(ALocalFile) then
+    raise Exception.Create('Arquivo local nao encontrado para envio: ' + ALocalFile);
+
+  EnsureRemoteDir(AFTP, ARemoteDir);
+  if Assigned(ALog) then
+    ALog('Enviando ' + ExtractFileName(ALocalFile) + ' como ' +
+      ARemoteDir + '/' + ARemoteName);
+  AFTP.ChangeDir(ARemoteDir);
+  AFTP.Put(ALocalFile, ARemoteName);
+end;
+
+procedure UploadEncryptedSaveForApollo(AFTP: TIdFTP; const ASave: TPS4SaveGame;
+  const ALocalDir, ARemoteDir: string; ALog: TPS4SaveLogEvent);
+var
+  ImageFile: string;
+  MetaFile: string;
+begin
+  if Trim(ASave.SaveName) = '' then
+    raise Exception.Create('Nome interno do save nao informado para ' + ASave.TitleID + '.');
+
+  ImageFile := TPath.Combine(ALocalDir, 'sdimg_' + ASave.SaveName);
+  MetaFile := TPath.Combine(ALocalDir, ASave.SaveName + '.bin');
+
+  UploadFileAs(AFTP, ImageFile, ARemoteDir, ASave.SaveName, ALog);
+  UploadFileAs(AFTP, MetaFile, ARemoteDir, ASave.SaveName + '.bin', ALog);
+end;
+
+procedure BackupPS4Saves(const AHost: string; APort: Word;
+  const ASaves: TArray<TPS4SaveGame>; const ADestFolder: string;
+  ALog: TPS4SaveLogEvent);
+var
+  FTP: TIdFTP;
+  Save: TPS4SaveGame;
+  LocalDir: string;
+begin
+  ForceDirectories(ADestFolder);
+  FTP := ConnectFTP(AHost, APort);
+  try
+    for Save in ASaves do
+    begin
+      LocalDir := TPath.Combine(ADestFolder, ApolloSaveFolderName(Save));
+      if Assigned(ALog) then
+        ALog('Backup de ' + Save.TitleID + ' / ' + Save.SaveName +
+          ' (usuario ' + Save.UserID + ')');
+      if not TryCopyLocalApolloSave(Save, LocalDir, ALog) then
+      begin
+        if Assigned(ALog) then
+          ALog('Exportacao do Apollo nao encontrada no PC; baixando save bruto do HDD via FTP.');
+        DownloadSaveSlot(FTP, Save, LocalDir, ALog);
+      end;
+      WriteBackupInfoFile(Save, LocalDir);
+    end;
+  finally
+    if FTP.Connected then FTP.Disconnect;
+    FTP.Free;
+  end;
+end;
+
+procedure WriteTrophyBackupInfoFile(const ADestFolder: string);
+var
+  Info: TStringList;
+begin
+  ForceDirectories(ADestFolder);
+  Info := TStringList.Create;
+  try
+    Info.Add('PS4 trophy backup');
+    Info.Add('');
+    Info.Add('Copie estas pastas de volta para o PS4, se precisar restaurar:');
+    Info.Add('TROPHY\user\home\<UserID>\trophy\data  -> /user/home/<UserID>/trophy/data');
+    Info.Add('TROPHY\user\home\<UserID>\trophy\db    -> /user/home/<UserID>/trophy/db');
+    Info.Add('TROPHY\user\trophy\conf                -> /user/trophy/conf');
+    Info.Add('');
+    Info.Add('Observacao: reinicie totalmente o PS4 antes de abrir Trofeus apos restaurar arquivos.');
+    Info.SaveToFile(TPath.Combine(ADestFolder, 'BACKUP_INFO.txt'), TEncoding.UTF8);
+  finally
+    Info.Free;
+  end;
+end;
+
+procedure BackupPS4Trophies(const AHost: string; APort: Word;
+  const ADestFolder: string; ALog: TPS4SaveLogEvent);
+var
+  FTP: TIdFTP;
+  Users: TArray<TPS4SaveUser>;
+  User: TPS4SaveUser;
+  LocalDataDir, LocalDbDir, LocalConfDir: string;
+begin
+  ForceDirectories(ADestFolder);
+  WriteTrophyBackupInfoFile(ADestFolder);
+
+  if Assigned(ALog) then
+    ALog('Listando usuarios do PS4...');
+  Users := ListPS4Users(AHost, APort);
+
+  FTP := ConnectFTP(AHost, APort);
+  try
+    for User in Users do
+    begin
+      if Assigned(ALog) then
+        ALog('Backup de trofeus do usuario ' + User.UserID);
+
+      LocalDataDir := TPath.Combine(TPath.Combine(TPath.Combine(TPath.Combine(
+        ADestFolder, 'user'), 'home'), User.UserID), 'trophy\data');
+      LocalDbDir := TPath.Combine(TPath.Combine(TPath.Combine(TPath.Combine(
+        ADestFolder, 'user'), 'home'), User.UserID), 'trophy\db');
+
+      DownloadDir(FTP, '/user/home/' + User.UserID + '/trophy/data',
+        LocalDataDir, ALog);
+      DownloadDir(FTP, '/user/home/' + User.UserID + '/trophy/db',
+        LocalDbDir, ALog);
+    end;
+
+    LocalConfDir := TPath.Combine(TPath.Combine(TPath.Combine(ADestFolder,
+      'user'), 'trophy'), 'conf');
+    DownloadDir(FTP, '/user/trophy/conf', LocalConfDir, ALog);
+  finally
+    if FTP.Connected then FTP.Disconnect;
+    FTP.Free;
+  end;
+end;
+
+procedure SyncPS4Saves(const ASourceHost, ADestHost: string; APort: Word;
+  const ASaves: TArray<TPS4SaveGame>; ALog: TPS4SaveLogEvent); overload;
+begin
+  SyncPS4Saves(ASourceHost, ADestHost, APort, ASaves, '', ALog);
+end;
+
+procedure DeleteRemoteFileIfExists(AFTP: TIdFTP; const ARemoteFile: string;
+  ALog: TPS4SaveLogEvent);
+begin
+  if Trim(ARemoteFile) = '' then Exit;
+  if not RemoteFileExists(AFTP, ARemoteFile) then Exit;
+
+  if Assigned(ALog) then
+    ALog('Deletando ' + ARemoteFile);
+  AFTP.Delete(ARemoteFile);
+end;
+
+procedure DeletePS4Saves(const AHost: string; APort: Word;
+  const ASaves: TArray<TPS4SaveGame>; ALog: TPS4SaveLogEvent);
+var
+  FTP: TIdFTP;
+  Save: TPS4SaveGame;
+  TitlePath: string;
+begin
+  if Length(ASaves) = 0 then Exit;
+
+  FTP := ConnectFTP(AHost, APort);
+  try
+    for Save in ASaves do
+    begin
+      if Assigned(ALog) then
+        ALog('Deletando save ' + Save.TitleID + ' / ' + Save.SaveName +
+          ' do usuario ' + Save.UserID + ' em ' + AHost + '...');
+
+      DeleteRemoteFileIfExists(FTP, Save.RemoteImagePath, ALog);
+      DeleteRemoteFileIfExists(FTP, Save.RemoteMetaPath, ALog);
+
+      TitlePath := PS4_USER_ROOT + '/home/' + Save.UserID + '/savedata/' +
+        Save.TitleID;
+      try
+        if TryListDir(FTP, TitlePath) and (FTP.DirectoryListing.Count = 0) then
+          FTP.RemoveDir(TitlePath);
+      except
+      end;
+    end;
+  finally
+    if FTP.Connected then FTP.Disconnect;
+    FTP.Free;
+  end;
+end;
+
+procedure SyncPS4Saves(const ASourceHost, ADestHost: string; APort: Word;
+  const ASaves: TArray<TPS4SaveGame>; const ADestUserID: string;
+  ALog: TPS4SaveLogEvent); overload;
+var
+  SrcFTP, DstFTP: TIdFTP;
+  Save: TPS4SaveGame;
+  TempRoot, LocalDir, RemoteBasePath, RemoteDestPath, DestUserID: string;
+begin
+  TempRoot := ExeTempRoot('PS4PKGDownloader_saves');
+  ForceDirectories(TempRoot);
+
+  SrcFTP := nil;
+  DstFTP := nil;
+  try
+    SrcFTP := ConnectFTP(ASourceHost, APort);
+    DstFTP := ConnectFTP(ADestHost, APort);
+    for Save in ASaves do
+    begin
+      DestUserID := Trim(ADestUserID);
+      if DestUserID = '' then
+        DestUserID := Save.UserID;
+      LocalDir := TPath.Combine(TPath.Combine(TPath.Combine(TempRoot, Save.UserID),
+        Save.TitleID), Save.SaveName);
+      RemoteBasePath := '/data/fakeusb/PS4/SAVEDATA/' + APOLLO_FAKEUSB_ACCOUNT_ID;
+      RemoteDestPath := RemoteBasePath + '/' + Save.TitleID;
+      if Assigned(ALog) then
+        ALog('Copiando save criptografado ' + Save.TitleID + ' / ' +
+          Save.SaveName + ' para o Fake USB do Apollo no PS4 destino (' +
+          RemoteDestPath + '). O Apollo fara a importacao para o usuario ' +
+          DestUserID + '.');
+      EnsureRemoteDir(DstFTP, RemoteDestPath);
+      DownloadSaveSlot(SrcFTP, Save, LocalDir, ALog);
+      ValidateEncryptedSaveFiles(Save, LocalDir);
+      UploadEncryptedSaveForApollo(DstFTP, Save, LocalDir, RemoteDestPath, ALog);
+    end;
+  finally
+    if Assigned(SrcFTP) and SrcFTP.Connected then SrcFTP.Disconnect;
+    if Assigned(DstFTP) and DstFTP.Connected then DstFTP.Disconnect;
+    SrcFTP.Free;
+    DstFTP.Free;
+    try
+      TDirectory.Delete(TempRoot, True);
+    except
+    end;
+  end;
+end;
+
+procedure SyncPS4Saves(const ASourceHost, ADestHost: string; APort: Word;
+  ALog: TPS4SaveLogEvent); overload;
+var
+  Saves: TArray<TPS4SaveGame>;
+begin
+  Saves := ListPS4SaveGames(ASourceHost, APort);
+  SyncPS4Saves(ASourceHost, ADestHost, APort, Saves, ALog);
+end;
+
+
+const
+  PS4_FTP_PORT = 2121;
+  PS4_SAVE_AGENT_PORT = 8084;
+  PS4_AGENT_FTP_USER = 'anonymous';
+  PS4_AGENT_FTP_PASS = 'anonymous@';
+  PS4_SAVE_AGENT_FILE = 'ps4-save-agent.elf';
+  PS4_SAVE_AGENT_REMOTE_DIR = '/data/payloads';
+  PS4_SAVE_AGENT_PING = 'PS4SAVEAGENT';
+  PS4_SAVE_AGENT_MIN_VERSION = 'PS4SAVEAGENT 0.5';
+  PS4_BINLOADER_PORTS: array[0..2] of Word = (9090, 9021, 9020);
+
+type
+  THTTPProgress = class
+  private
+    FMessage: string;
+    FProgress: TPS4SaveAgentProgressEvent;
+    FMax: Int64;
+  public
+    constructor Create(const AMessage: string; AProgress: TPS4SaveAgentProgressEvent;
+      ADefaultMax: Int64 = 0);
+    procedure WorkBegin(ASender: TObject; AWorkMode: TWorkMode;
+      AWorkCountMax: Int64);
+    procedure Work(ASender: TObject; AWorkMode: TWorkMode; AWorkCount: Int64);
+    procedure WorkEnd(ASender: TObject; AWorkMode: TWorkMode);
+  end;
+
+constructor THTTPProgress.Create(const AMessage: string;
+  AProgress: TPS4SaveAgentProgressEvent; ADefaultMax: Int64);
+begin
+  inherited Create;
+  FMessage := AMessage;
+  FProgress := AProgress;
+  FMax := ADefaultMax;
+end;
+
+procedure THTTPProgress.WorkBegin(ASender: TObject; AWorkMode: TWorkMode;
+  AWorkCountMax: Int64);
+begin
+  if AWorkCountMax > 0 then
+    FMax := AWorkCountMax;
+  if Assigned(FProgress) then
+    FProgress(FMessage, 0, FMax);
+end;
+
+procedure THTTPProgress.Work(ASender: TObject; AWorkMode: TWorkMode;
+  AWorkCount: Int64);
+begin
+  if Assigned(FProgress) then
+    FProgress(FMessage, AWorkCount, FMax);
+end;
+
+procedure THTTPProgress.WorkEnd(ASender: TObject; AWorkMode: TWorkMode);
+begin
+  if Assigned(FProgress) then
+    FProgress(FMessage, FMax, FMax);
+end;
+
+function PS4SaveAgentLocalPath: string;
+begin
+  Result := TPath.Combine(ExtractFileDir(ParamStr(0)), 'payloads');
+  Result := TPath.Combine(Result, PS4_SAVE_AGENT_FILE);
+end;
+
+function PS4SaveAgentRemotePath: string;
+begin
+  Result := PS4_SAVE_AGENT_REMOTE_DIR + '/' + PS4_SAVE_AGENT_FILE;
+end;
+
+procedure Log(ALog: TPS4SaveAgentLogEvent; const AMsg: string);
+begin
+  if Assigned(ALog) then
+    ALog(AMsg);
+end;
+
+function ConnectAgentFTP(const AHost: string): TIdFTP;
+begin
+  Result := TIdFTP.Create(nil);
+  try
+    Result.Host := Trim(AHost);
+    Result.Port := PS4_FTP_PORT;
+    Result.Username := PS4_AGENT_FTP_USER;
+    Result.Password := PS4_AGENT_FTP_PASS;
+    Result.Passive := True;
+    Result.TransferType := ftBinary;
+    Result.ConnectTimeout := 8000;
+    Result.ReadTimeout := 30000;
+    Result.Connect;
+  except
+    Result.Free;
+    raise;
+  end;
+end;
+
+function AgentNormalizeRemotePath(const S: string): string;
+begin
+  Result := StringReplace(S, '\', '/', [rfReplaceAll]);
+  while Pos('//', Result) > 0 do
+    Result := StringReplace(Result, '//', '/', [rfReplaceAll]);
+  if (Result = '') or (Result[1] <> '/') then
+    Result := '/' + Result;
+  if (Length(Result) > 1) and (Result[Length(Result)] = '/') then
+    Delete(Result, Length(Result), 1);
+end;
+
+function AgentRemoteDirName(const ARemoteFile: string): string;
+var
+  P: Integer;
+begin
+  Result := AgentNormalizeRemotePath(ARemoteFile);
+  P := LastDelimiter('/', Result);
+  if P > 1 then
+    Result := Copy(Result, 1, P - 1)
+  else
+    Result := '/';
+end;
+
+function AgentRemoteFileName(const ARemoteFile: string): string;
+var
+  P: Integer;
+begin
+  Result := AgentNormalizeRemotePath(ARemoteFile);
+  P := LastDelimiter('/', Result);
+  if P > 0 then
+    Result := Copy(Result, P + 1, MaxInt);
+end;
+
+procedure AgentEnsureRemoteDir(AFTP: TIdFTP; const APath: string);
+var
+  Part: string;
+  CurrentPath: string;
+begin
+  CurrentPath := '';
+  for Part in AgentNormalizeRemotePath(APath).Split(['/']) do
+  begin
+    if Part = '' then Continue;
+    CurrentPath := CurrentPath + '/' + Part;
+    try
+      AFTP.ChangeDir(CurrentPath);
+    except
+      try
+        AFTP.MakeDir(CurrentPath);
+      except
+      end;
+      AFTP.ChangeDir(CurrentPath);
+    end;
+  end;
+end;
+
+function AgentRemoteFileExists(AFTP: TIdFTP; const ARemoteFile: string;
+  out ASize: Int64): Boolean;
+var
+  DirName: string;
+  FileName: string;
+  I: Integer;
+begin
+  Result := False;
+  ASize := -1;
+  DirName := AgentRemoteDirName(ARemoteFile);
+  FileName := AgentRemoteFileName(ARemoteFile);
+  if FileName = '' then Exit;
+
+  try
+    AFTP.DirectoryListing.Clear;
+    AFTP.ChangeDir(DirName);
+    AFTP.List('', True);
+  except
+    Exit(False);
+  end;
+
+  for I := 0 to AFTP.DirectoryListing.Count - 1 do
+    if (AFTP.DirectoryListing[I].ItemType <> ditDirectory) and
+       SameText(AFTP.DirectoryListing[I].FileName, FileName) then
+    begin
+      ASize := AFTP.DirectoryListing[I].Size;
+      Exit(True);
+    end;
+end;
+
+procedure EnsureAgentUploaded(const AHost: string; ALog: TPS4SaveAgentLogEvent);
+var
+  FTP: TIdFTP;
+  RemoteSize: Int64;
+  LocalSize: Int64;
+  LocalPath: string;
+begin
+  LocalPath := PS4SaveAgentLocalPath;
+  if not TFile.Exists(LocalPath) then
+    raise Exception.Create('ELF do PS4 Save Agent nao encontrado: ' + LocalPath + sLineBreak +
+      'Compile o payload em tools\ps4-save-agent e copie o ELF para a pasta payloads.');
+
+  LocalSize := TFile.GetSize(LocalPath);
+  FTP := ConnectAgentFTP(AHost);
+  try
+    if AgentRemoteFileExists(FTP, PS4SaveAgentRemotePath, RemoteSize) and
+       (RemoteSize = LocalSize) then
+    begin
+      Log(ALog, 'PS4 Save Agent ja esta no PS4: ' + PS4SaveAgentRemotePath);
+      Exit;
+    end;
+
+    Log(ALog, 'Enviando PS4 Save Agent para ' + PS4SaveAgentRemotePath + '...');
+    AgentEnsureRemoteDir(FTP, PS4_SAVE_AGENT_REMOTE_DIR);
+    FTP.ChangeDir(PS4_SAVE_AGENT_REMOTE_DIR);
+    FTP.Put(LocalPath, PS4_SAVE_AGENT_FILE);
+    Log(ALog, 'PS4 Save Agent copiado para o PS4.');
+  finally
+    if FTP.Connected then
+      FTP.Disconnect;
+    FTP.Free;
+  end;
+end;
+
+procedure EnsurePS4SaveAgentInstalled(const AHost: string; ALog: TPS4SaveAgentLogEvent);
+var
+  FTP: TIdFTP;
+  RemoteSize: Int64;
+begin
+  FTP := ConnectAgentFTP(AHost);
+  try
+    if AgentRemoteFileExists(FTP, PS4SaveAgentRemotePath, RemoteSize) then
+    begin
+      Log(ALog, 'PS4 Save Agent ja esta no PS4: ' + PS4SaveAgentRemotePath);
+      Exit;
+    end;
+  finally
+    if FTP.Connected then
+      FTP.Disconnect;
+    FTP.Free;
+  end;
+
+  EnsureAgentUploaded(AHost, ALog);
+end;
+
+function TryDownloadAgentFromPS4(const AHost: string; ALog: TPS4SaveAgentLogEvent): Boolean;
+var
+  FTP: TIdFTP;
+  RemoteSize: Int64;
+  LocalPath: string;
+begin
+  Result := False;
+  LocalPath := PS4SaveAgentLocalPath;
+
+  FTP := ConnectAgentFTP(AHost);
+  try
+    if not AgentRemoteFileExists(FTP, PS4SaveAgentRemotePath, RemoteSize) then
+      Exit(False);
+
+    ForceDirectories(ExtractFileDir(LocalPath));
+    FTP.Get(PS4SaveAgentRemotePath, LocalPath, True);
+    Result := TFile.Exists(LocalPath);
+    if Result then
+      Log(ALog, 'PS4 Save Agent baixado do PS4 para ' + LocalPath + '.');
+  finally
+    if FTP.Connected then
+      FTP.Disconnect;
+    FTP.Free;
+  end;
+end;
+
+function AgentBaseURL(const AHost: string): string;
+begin
+  Result := 'http://' + Trim(AHost) + ':' + IntToStr(PS4_SAVE_AGENT_PORT);
+end;
+
+function TryPingAgent(const AHost: string): Boolean;
+var
+  HTTP: TIdHTTP;
+  S: string;
+begin
+  Result := False;
+  HTTP := TIdHTTP.Create(nil);
+  try
+    HTTP.ConnectTimeout := 1500;
+    HTTP.ReadTimeout := 2500;
+    try
+      S := HTTP.Get(AgentBaseURL(AHost) + '/api/ping');
+      Result := Pos(PS4_SAVE_AGENT_PING, UpperCase(S)) > 0;
+    except
+      Result := False;
+    end;
+  finally
+    HTTP.Free;
+  end;
+end;
+
+function TryGetAgentVersion(const AHost: string; out AVersion: string): Boolean;
+var
+  HTTP: TIdHTTP;
+begin
+  Result := False;
+  AVersion := '';
+  HTTP := TIdHTTP.Create(nil);
+  try
+    HTTP.ConnectTimeout := 1500;
+    HTTP.ReadTimeout := 2500;
+    try
+      AVersion := Trim(HTTP.Get(AgentBaseURL(AHost) + '/api/version'));
+      Result := Pos(PS4_SAVE_AGENT_MIN_VERSION, UpperCase(AVersion)) > 0;
+    except
+      AVersion := '';
+      Result := False;
+    end;
+  finally
+    HTTP.Free;
+  end;
+end;
+
+function WaitForAgentReady(const AHost: string; ASeconds: Integer;
+  ALog: TPS4SaveAgentLogEvent): Boolean;
+var
+  StartedAt: TDateTime;
+  AgentVersion: string;
+  LastLogAt: TDateTime;
+begin
+  Result := False;
+  StartedAt := Now;
+  LastLogAt := 0;
+  repeat
+    if TryPingAgent(AHost) and TryGetAgentVersion(AHost, AgentVersion) then
+      Exit(True);
+    if (LastLogAt = 0) or (SecondsBetween(Now, LastLogAt) >= 3) then
+    begin
+      Log(ALog, 'Aguardando PS4 Save Agent responder...');
+      LastLogAt := Now;
+    end;
+    Sleep(1000);
+  until SecondsBetween(Now, StartedAt) >= ASeconds;
+end;
+
+function TrySendAgentToBinLoader(const AHost: string; ALog: TPS4SaveAgentLogEvent): Boolean;
+var
+  Payload: TBytes;
+  IdPayload: TIdBytes;
+  TCP: TIdTCPClient;
+  Port: Word;
+  LocalPath: string;
+begin
+  Result := False;
+  LocalPath := PS4SaveAgentLocalPath;
+
+  if not TFile.Exists(LocalPath) then
+  begin
+    Log(ALog, 'ELF local nao encontrado; tentando baixar do PS4...');
+    if not TryDownloadAgentFromPS4(AHost, ALog) then
+    begin
+      Log(ALog, 'Nao foi possivel obter o ELF local para enviar ao BinLoader.');
+      Exit(False);
+    end;
+  end;
+
+  Payload := TFile.ReadAllBytes(LocalPath);
+  if Length(Payload) = 0 then
+  begin
+    Log(ALog, 'ELF local esta vazio: ' + LocalPath);
+    Exit(False);
+  end;
+  Log(ALog, Format('Usando ELF local %s (%d bytes).', [LocalPath, Length(Payload)]));
+
+  SetLength(IdPayload, Length(Payload));
+  if Length(Payload) > 0 then
+    Move(Payload[0], IdPayload[0], Length(Payload));
+
+  for Port in PS4_BINLOADER_PORTS do
+  begin
+    TCP := TIdTCPClient.Create(nil);
+    try
+      try
+        Log(ALog, Format('Tentando iniciar PS4 Save Agent pelo BinLoader na porta %d...', [Port]));
+        TCP.Host := Trim(AHost);
+        TCP.Port := Port;
+        TCP.ConnectTimeout := 7000;
+        TCP.ReadTimeout := 7000;
+        TCP.Connect;
+        TCP.IOHandler.Write(IdPayload);
+        Sleep(250);
+        TCP.Disconnect;
+        Log(ALog, Format('PS4 Save Agent enviado ao BinLoader na porta %d.', [Port]));
+        Exit(True);
+      except
+        on E: Exception do
+          Log(ALog, Format('BinLoader porta %d indisponivel (%s).', [Port, E.Message]));
+      end;
+    finally
+      TCP.Free;
+    end;
+  end;
+end;
+
+procedure EnsurePS4SaveAgentReady(const AHost: string; ALog: TPS4SaveAgentLogEvent);
+var
+  AgentVersion: string;
+  Attempt: Integer;
+begin
+  if TryPingAgent(AHost) then
+  begin
+    if not TryGetAgentVersion(AHost, AgentVersion) then
+      raise Exception.Create('Existe um PS4 Save Agent antigo/minimo em execucao em ' +
+        AHost + '. Ele responde /api/ping, mas nao tem /api/version nem as rotas ' +
+        'de sincronia. O ELF novo ja pode estar em /data/payloads, mas o processo ' +
+        'antigo continua na RAM. Reinicie o PS4 ou encerre/recarregue o payload e ' +
+        'execute novamente.');
+    Log(ALog, 'PS4 Save Agent ja esta em execucao em ' + AHost + '.');
+    Exit;
+  end;
+
+  Log(ALog, 'PS4 Save Agent nao respondeu; verificando se o ELF existe no PS4...');
+  EnsurePS4SaveAgentInstalled(AHost, ALog);
+
+  if WaitForAgentReady(AHost, 4, ALog) then
+  begin
+    Log(ALog, 'PS4 Save Agent respondeu em ' + AHost + '.');
+    Exit;
+  end;
+
+  Log(ALog, 'PS4 Save Agent nao esta em execucao; tentando iniciar pelo BinLoader do GoldHEN...');
+  for Attempt := 1 to 2 do
+  begin
+    if Attempt > 1 then
+    begin
+      Log(ALog, 'PS4 Save Agent ainda nao respondeu; reenviando ao BinLoader...');
+      Sleep(1500);
+    end;
+
+    if TrySendAgentToBinLoader(AHost, ALog) and WaitForAgentReady(AHost, 15, ALog) then
+    begin
+      Log(ALog, 'PS4 Save Agent iniciado automaticamente em ' + AHost + '.');
+      Exit;
+    end;
+  end;
+
+  raise Exception.Create('O arquivo ' + PS4SaveAgentRemotePath +
+    ' existe no PS4, mas o Agent nao respondeu na porta ' +
+    IntToStr(PS4_SAVE_AGENT_PORT) + ' depois do envio ao BinLoader. ' +
+    'Quando isso acontece, o GoldHEN aceitou o arquivo mas o payload morreu ao iniciar. ' +
+    'Execute manualmente pelo Payloader e veja se http://' + Trim(AHost) + ':' +
+    IntToStr(PS4_SAVE_AGENT_PORT) + '/api/version responde.');
+end;
+
+function ExtractResponseValue(const AResponse, AName: string): string;
+var
+  Lines: TArray<string>;
+  Line, Prefix: string;
+begin
+  Result := '';
+  Prefix := LowerCase(AName) + '=';
+  Lines := AResponse.Replace(#13, '').Split([#10]);
+  for Line in Lines do
+    if Pos(Prefix, LowerCase(Trim(Line))) = 1 then
+      Exit(Trim(Copy(Trim(Line), Length(Prefix) + 1, MaxInt)));
+end;
+
+function GetPS4SaveAgentAccountID(const AHost, AUserID: string;
+  ALog: TPS4SaveAgentLogEvent): string;
+var
+  HTTP: TIdHTTP;
+  Response: string;
+begin
+  EnsurePS4SaveAgentReady(AHost, ALog);
+
+  HTTP := TIdHTTP.Create(nil);
+  try
+    HTTP.ConnectTimeout := 5000;
+    HTTP.ReadTimeout := 10000;
+    try
+      Response := HTTP.Get(AgentBaseURL(AHost) + '/api/account_id?user=' +
+        TIdURI.ParamsEncode(AUserID));
+    except
+      on E: EIdHTTPProtocolException do
+      begin
+        Response := E.ErrorMessage;
+        Result := ExtractResponseValue(Response, 'account_id');
+        if Result = '' then
+          Result := '0000000000000000';
+        Exit;
+      end;
+    end;
+
+    Result := ExtractResponseValue(Response, 'account_id');
+    if Result = '' then
+      Result := '0000000000000000';
+  finally
+    HTTP.Free;
+  end;
+end;
+
+procedure ShutdownPS4SaveAgent(const AHost: string; ALog: TPS4SaveAgentLogEvent);
+var
+  HTTP: TIdHTTP;
+begin
+  if Trim(AHost) = '' then Exit;
+
+  HTTP := TIdHTTP.Create(nil);
+  try
+    HTTP.ConnectTimeout := 1500;
+    HTTP.ReadTimeout := 2500;
+    try
+      HTTP.Get(AgentBaseURL(AHost) + '/api/shutdown');
+      Log(ALog, 'PS4 Save Agent finalizado em ' + AHost + '.');
+    except
+      on E: Exception do
+        Log(ALog, 'PS4 Save Agent nao respondeu ao shutdown em ' + AHost + ': ' + E.Message);
+    end;
+  finally
+    HTTP.Free;
+  end;
+end;
+
+function EncodeURLValue(const S: string): string;
+begin
+  Result := TIdURI.ParamsEncode(S);
+end;
+
+procedure DownloadDecryptedSave(const AHost: string; const ASave: TPS4SaveGame;
+  const ALocalZip: string; ALog: TPS4SaveAgentLogEvent;
+  AProgress: TPS4SaveAgentProgressEvent);
+var
+  HTTP: TIdHTTP;
+  URL: string;
+  FS: TFileStream;
+  Progress: THTTPProgress;
+begin
+  ForceDirectories(ExtractFileDir(ALocalZip));
+  URL := AgentBaseURL(AHost) + '/api/export_decrypted?user=' +
+    EncodeURLValue(ASave.UserID) + '&title=' + EncodeURLValue(ASave.TitleID) +
+    '&save=' + EncodeURLValue(ASave.SaveName);
+
+  Log(ALog, 'Baixando save descriptografado de ' + AHost + ': ' +
+    ASave.TitleID + ' / ' + ASave.SaveName);
+
+  HTTP := TIdHTTP.Create(nil);
+  FS := TFileStream.Create(ALocalZip, fmCreate);
+  Progress := THTTPProgress.Create('Baixando ' + ASave.TitleID + ' / ' +
+    ASave.SaveName + ' do PS4 origem...', AProgress);
+  try
+    HTTP.ConnectTimeout := 10000;
+    HTTP.ReadTimeout := 1800000;
+    HTTP.OnWorkBegin := Progress.WorkBegin;
+    HTTP.OnWork := Progress.Work;
+    HTTP.OnWorkEnd := Progress.WorkEnd;
+    HTTP.Get(URL, FS);
+  finally
+    Progress.Free;
+    FS.Free;
+    HTTP.Free;
+  end;
+end;
+
+procedure UploadDecryptedSave(const AHost, ADestUserID: string;
+  const ASave: TPS4SaveGame; const ALocalZip: string; ALog: TPS4SaveAgentLogEvent;
+  AProgress: TPS4SaveAgentProgressEvent);
+var
+  HTTP: TIdHTTP;
+  FS: TFileStream;
+  URL: string;
+  Response: string;
+  Progress: THTTPProgress;
+begin
+  if not TFile.Exists(ALocalZip) then
+    raise Exception.Create('Backup descriptografado nao encontrado para upload: ' + ALocalZip);
+
+  URL := AgentBaseURL(AHost) + '/api/import_decrypted?user=' +
+    EncodeURLValue(ADestUserID) + '&title=' + EncodeURLValue(ASave.TitleID) +
+    '&save=' + EncodeURLValue(ASave.SaveName) + '&source_user=' +
+    EncodeURLValue(ASave.UserID);
+
+  Log(ALog, 'Enviando save descriptografado para ' + AHost + ': ' +
+    ASave.TitleID + ' / ' + ASave.SaveName);
+
+  HTTP := TIdHTTP.Create(nil);
+  FS := TFileStream.Create(ALocalZip, fmOpenRead or fmShareDenyWrite);
+  Progress := THTTPProgress.Create('Enviando ' + ASave.TitleID + ' / ' +
+    ASave.SaveName + ' para o PS4 destino...', AProgress, FS.Size);
+  try
+    HTTP.ConnectTimeout := 10000;
+    HTTP.ReadTimeout := 1800000;
+    HTTP.Request.ContentType := 'application/octet-stream';
+    HTTP.OnWorkBegin := Progress.WorkBegin;
+    HTTP.OnWork := Progress.Work;
+    HTTP.OnWorkEnd := Progress.WorkEnd;
+    Response := Trim(HTTP.Post(URL, FS));
+    if Response <> '' then
+      Log(ALog, 'Resposta do import: ' +
+        StringReplace(Response, sLineBreak, ' | ', [rfReplaceAll]));
+  finally
+    Progress.Free;
+    FS.Free;
+    HTTP.Free;
+  end;
+end;
+
+procedure CopySaveOnConsole(const AHost: string; const ASourceUserID,
+  ADestUserID: string; const ASave: TPS4SaveGame; ALog: TPS4SaveAgentLogEvent);
+var
+  HTTP: TIdHTTP;
+  Body: TStringStream;
+  URL: string;
+  Response: string;
+begin
+  URL := AgentBaseURL(AHost) + '/api/sync_decrypted?source_user=' +
+    EncodeURLValue(ASourceUserID) + '&dest_user=' + EncodeURLValue(ADestUserID) +
+    '&title=' + EncodeURLValue(ASave.TitleID) + '&save=' +
+    EncodeURLValue(ASave.SaveName);
+
+  Log(ALog, 'Copiando save dentro do PS4 pelo payload: ' +
+    ASave.TitleID + ' / ' + ASave.SaveName + ' de ' + ASourceUserID +
+    ' para ' + ADestUserID);
+
+  HTTP := TIdHTTP.Create(nil);
+  Body := TStringStream.Create('', TEncoding.UTF8);
+  try
+    HTTP.ConnectTimeout := 10000;
+    HTTP.ReadTimeout := 1800000;
+    try
+      Response := Trim(HTTP.Post(URL, Body));
+      if Response <> '' then
+        Log(ALog, 'Resposta do PS4 Save Agent: ' +
+          StringReplace(Response, sLineBreak, ' | ', [rfReplaceAll]));
+    except
+      on E: EIdHTTPProtocolException do
+      begin
+        Log(ALog, 'Erro do PS4 Save Agent: HTTP ' + IntToStr(E.ErrorCode) +
+          ' - ' + Trim(E.ErrorMessage));
+        raise Exception.Create('PS4 Save Agent recusou a sincronizacao: HTTP ' +
+          IntToStr(E.ErrorCode) + ' - ' + Trim(E.ErrorMessage));
+      end;
+      on E: EIdConnClosedGracefully do
+        Log(ALog, 'PS4 Save Agent fechou a conexao apos processar a requisicao.');
+    end;
+  finally
+    Body.Free;
+    HTTP.Free;
+  end;
+end;
+
+procedure DeletePS4SaveWithAgent(const AHost: string; const ASave: TPS4SaveGame;
+  ALog: TPS4SaveAgentLogEvent);
+var
+  HTTP: TIdHTTP;
+  Body: TStringStream;
+  URL: string;
+  Response: string;
+begin
+  EnsurePS4SaveAgentReady(AHost, ALog);
+  URL := AgentBaseURL(AHost) + '/api/delete_save?user=' +
+    EncodeURLValue(ASave.UserID) + '&title=' + EncodeURLValue(ASave.TitleID) +
+    '&save=' + EncodeURLValue(ASave.SaveName);
+
+  Log(ALog, 'Deletando save pelo PS4 Save Agent: ' + ASave.TitleID + ' / ' +
+    ASave.SaveName + ' usuario ' + ASave.UserID);
+
+  HTTP := TIdHTTP.Create(nil);
+  Body := TStringStream.Create('', TEncoding.UTF8);
+  try
+    HTTP.ConnectTimeout := 10000;
+    HTTP.ReadTimeout := 120000;
+    Response := Trim(HTTP.Post(URL, Body));
+    if Response <> '' then
+      Log(ALog, 'Resposta do delete: ' +
+        StringReplace(Response, sLineBreak, ' | ', [rfReplaceAll]));
+  finally
+    Body.Free;
+    HTTP.Free;
+  end;
+end;
+
+procedure CleanupPS4StaleSavesWithAgent(const AHost, AUserID: string;
+  ALog: TPS4SaveAgentLogEvent);
+var
+  HTTP: TIdHTTP;
+  Body: TStringStream;
+  URL: string;
+  Response: string;
+begin
+  if Trim(AUserID) = '' then
+    Exit;
+
+  EnsurePS4SaveAgentReady(AHost, ALog);
+  URL := AgentBaseURL(AHost) + '/api/cleanup_saves?user=' +
+    EncodeURLValue(AUserID);
+
+  Log(ALog, 'Limpando registros orfaos de saves do usuario ' + AUserID + '...');
+
+  HTTP := TIdHTTP.Create(nil);
+  Body := TStringStream.Create('', TEncoding.UTF8);
+  try
+    HTTP.ConnectTimeout := 10000;
+    HTTP.ReadTimeout := 120000;
+    Response := Trim(HTTP.Post(URL, Body));
+    if Response <> '' then
+      Log(ALog, 'Resposta da limpeza: ' +
+        StringReplace(Response, sLineBreak, ' | ', [rfReplaceAll]));
+  finally
+    Body.Free;
+    HTTP.Free;
+  end;
+end;
+
+function SafeFolderName(const S: string): string;
+const
+  INVALID_CHARS: TSysCharSet = ['\', '/', ':', '*', '?', '"', '<', '>', '|'];
+var
+  I: Integer;
+begin
+  Result := Trim(S);
+  if Result = '' then
+    Result := 'save';
+  for I := 1 to Length(Result) do
+    if CharInSet(Result[I], INVALID_CHARS) then
+      Result[I] := '_';
+end;
+
+procedure SyncPS4SavesDecrypted(const ASourceHost, ADestHost: string;
+  const ASourceUserID, ADestUserID: string; const ASaves: TArray<TPS4SaveGame>;
+  const ABackupRoot: string; ALog: TPS4SaveAgentLogEvent;
+  AProgress: TPS4SaveAgentProgressEvent);
+var
+  Save: TPS4SaveGame;
+  WorkSave: TPS4SaveGame;
+  BackupDir: string;
+  ZipPath: string;
+  I: Integer;
+begin
+  if Length(ASaves) = 0 then
+    raise Exception.Create('Nenhum save selecionado para sincronizar.');
+
+  Log(ALog, 'Preparando PS4 Save Agent na origem...');
+  EnsurePS4SaveAgentReady(ASourceHost, ALog);
+  Log(ALog, 'Preparando PS4 Save Agent no destino...');
+  EnsurePS4SaveAgentReady(ADestHost, ALog);
+
+  ForceDirectories(ABackupRoot);
+  for I := 0 to High(ASaves) do
+  begin
+    Save := ASaves[I];
+    WorkSave := Save;
+    WorkSave.UserID := ASourceUserID;
+
+    BackupDir := TPath.Combine(ABackupRoot, SafeFolderName(WorkSave.TitleID));
+    BackupDir := TPath.Combine(BackupDir, SafeFolderName(WorkSave.SaveName));
+    ForceDirectories(BackupDir);
+    ZipPath := TPath.Combine(BackupDir, SafeFolderName(WorkSave.UserID + '_' +
+      FormatDateTime('yyyymmdd_hhnnss', Now)) + '.ps4sav');
+
+    if Assigned(AProgress) then
+      AProgress(Format('Save %d de %d: %s / %s',
+        [I + 1, Length(ASaves), WorkSave.TitleID, WorkSave.SaveName]), 0, 0);
+    DownloadDecryptedSave(ASourceHost, WorkSave, ZipPath, ALog, AProgress);
+    UploadDecryptedSave(ADestHost, ADestUserID, WorkSave, ZipPath, ALog, AProgress);
+  end;
+end;
+
+procedure SyncPS4SavesOnConsole(const AHost: string;
+  const ASourceUserID, ADestUserID: string; const ASaves: TArray<TPS4SaveGame>;
+  ALog: TPS4SaveAgentLogEvent);
+var
+  Save: TPS4SaveGame;
+begin
+  if Length(ASaves) = 0 then
+    raise Exception.Create('Nenhum save selecionado para sincronizar.');
+  if SameText(ASourceUserID, ADestUserID) then
+    raise Exception.Create('O usuario de origem e destino precisa ser diferente.');
+
+  Log(ALog, 'Preparando PS4 Save Agent em ' + AHost + '...');
+  EnsurePS4SaveAgentReady(AHost, ALog);
+
+  for Save in ASaves do
+    CopySaveOnConsole(AHost, ASourceUserID, ADestUserID, Save, ALog);
+end;
+
+
+end.
+
+

@@ -20,12 +20,15 @@ type
   end;
 
   TPS4TrophyLogEvent = procedure(const AMsg: string) of object;
+  TPS4TrophyProgressEvent = procedure(const AMsg: string;
+    APosition, AMax: Int64) of object;
   TPS4TrophyExistingMode = (temMerge, temReplace);
 
 function ListPS4TrophyUsers(const AHost: string; APort: Word): TArray<TPS4TrophyUser>;
 function ListPS4Trophies(const AHost: string; APort: Word): TArray<TPS4TrophyTitle>;
 function ListPS4TrophiesForUser(const AHost: string; APort: Word;
   const AUserID: string): TArray<TPS4TrophyTitle>;
+function ListPS4TrophiesFromBackup(const ABackupDir, AUserID: string): TArray<TPS4TrophyTitle>;
 procedure SyncPS4Trophies(const ALeftHost, ADestHost: string; APort: Word;
   const ATrophies: TArray<TPS4TrophyTitle>; AExistingMode: TPS4TrophyExistingMode;
   ALog: TPS4TrophyLogEvent);
@@ -44,6 +47,10 @@ procedure BackupPS4TrophyState(const AHost: string; APort: Word;
   const AUserID, ADestDir: string; ALog: TPS4TrophyLogEvent);
 procedure RestorePS4TrophyState(const AHost: string; APort: Word;
   const AUserID, ALeftDir: string; ALog: TPS4TrophyLogEvent);
+procedure RestorePS4TrophyTitles(const AHost: string; APort: Word;
+  const AUserID, ABackupDir: string;
+  const ATrophies: TArray<TPS4TrophyTitle>; AExistingMode: TPS4TrophyExistingMode;
+  ALog: TPS4TrophyLogEvent; AProgress: TPS4TrophyProgressEvent);
 
 implementation
 
@@ -84,6 +91,8 @@ begin
   end;
   Result := GSQLiteExecUtf8(DbConnection, sql, Callback, CallbackArg, ErrMsg);
 end;
+
+procedure EnsureSQLiteLoaded; forward;
 
 function UTF8PtrToString(P: MarshaledAString): string;
 begin
@@ -170,6 +179,25 @@ type
     procedure MergeFromLeft(const ALeftDb: string; const ATrophyTitleID: string;
       AExistingMode: TPS4TrophyExistingMode);
   end;
+
+function ListPS4TrophiesFromBackup(const ABackupDir, AUserID: string): TArray<TPS4TrophyTitle>;
+var
+  Db: TPS4TrophyDb;
+  DbFile: string;
+  DbFiles: TArray<string>;
+begin
+  DbFiles := TDirectory.GetFiles(ABackupDir, 'trophy_local.db', TSearchOption.soAllDirectories);
+  if Length(DbFiles) = 0 then
+    raise Exception.Create('Backup invalido: trophy_local.db nao encontrado.');
+  DbFile := DbFiles[0];
+  EnsureSQLiteLoaded;
+  Db := TPS4TrophyDb.Create(DbFile);
+  try
+    Result := Db.ReadTitles(AUserID);
+  finally
+    Db.Free;
+  end;
+end;
 
 constructor TPS4TrophyDb.Create(const AFileName: string);
 var
@@ -987,6 +1015,7 @@ var
   SrcFTP, DstFTP: TIdFTP;
   WorkDir, SrcDb, DstDb, SrcUserID, DstUserID: string;
   Trophy: TPS4TrophyTitle;
+  I: Integer;
   LocalDataDir, LocalConfDir: string;
   Db: TPS4TrophyDb;
   NeedSceTropClear: Boolean;
@@ -1025,8 +1054,9 @@ begin
     EnsureSQLiteLoaded;
     Db := TPS4TrophyDb.Create(DstDb);
     try
-      for Trophy in ATrophies do
+      for I := 0 to High(ATrophies) do
       begin
+        Trophy := ATrophies[I];
         if Db.HasTitle(Trophy.TrophyTitleID) and (AExistingMode = temMerge) then
         begin
           if Assigned(ALog) then
@@ -1087,6 +1117,74 @@ procedure SyncPS4Trophies(const ALeftHost, ADestHost: string; APort: Word;
 begin
   SyncPS4TrophiesForUsers(ALeftHost, ADestHost, APort, '', '', ATrophies,
     AExistingMode, ALog);
+end;
+
+procedure RestorePS4TrophyTitles(const AHost: string; APort: Word;
+  const AUserID, ABackupDir: string;
+  const ATrophies: TArray<TPS4TrophyTitle>; AExistingMode: TPS4TrophyExistingMode;
+  ALog: TPS4TrophyLogEvent; AProgress: TPS4TrophyProgressEvent);
+var
+  FTP: TIdFTP;
+  WorkDir, TargetDb, SourceDb, UserID, SourceUserID: string;
+  SourceDbs: TArray<string>;
+  Trophy: TPS4TrophyTitle;
+  I: Integer;
+  Db: TPS4TrophyDb;
+begin
+  if Length(ATrophies) = 0 then
+    raise Exception.Create('Nenhum trofeu selecionado.');
+  WorkDir := TPath.Combine(TPath.GetTempPath,
+    'PS4PKGDownloader_trophy_restore_' + FormatDateTime('yyyymmdd_hhnnss_zzz', Now));
+  TargetDb := TPath.Combine(WorkDir, 'target_trophy_local.db');
+  SourceDbs := TDirectory.GetFiles(ABackupDir, 'trophy_local.db', TSearchOption.soAllDirectories);
+  if Length(SourceDbs) = 0 then
+    raise Exception.Create('Backup invalido: trophy_local.db nao encontrado.');
+  SourceDb := SourceDbs[0];
+  FTP := nil;
+  try
+    ForceDirectories(WorkDir);
+    FTP := ConnectFTP(AHost, APort);
+    UserID := Trim(AUserID);
+    if UserID = '' then
+      raise Exception.Create('Usuario de destino nao informado.');
+    DownloadRemoteDb(FTP, UserID, TargetDb);
+    EnsureSQLiteLoaded;
+    Db := TPS4TrophyDb.Create(TargetDb);
+    try
+      for I := 0 to High(ATrophies) do
+      begin
+        Trophy := ATrophies[I];
+        if Assigned(ALog) then
+          ALog('Restaurando jogo de trofeus: ' + Trophy.TrophyTitleID + ' - ' + Trophy.Title);
+        Db.MergeFromLeft(SourceDb, Trophy.TrophyTitleID, AExistingMode);
+        if Assigned(AProgress) then
+          AProgress('Trofeu ' + IntToStr(I + 1) + ' de ' +
+            IntToStr(Length(ATrophies)) + ' concluido: ' + Trophy.Title,
+            I + 1, Length(ATrophies));
+      end;
+    finally
+      Db.Free;
+    end;
+    UploadRemoteDb(FTP, UserID, TargetDb);
+    SourceUserID := ExtractFileName(ExcludeTrailingPathDelimiter(ABackupDir));
+    for Trophy in ATrophies do
+    begin
+      UploadDir(FTP,
+        TPath.Combine(ABackupDir, 'user\home\' + SourceUserID + '\trophy\data\' + Trophy.TrophyTitleID),
+        '/user/home/' + UserID + '/trophy/data/' + Trophy.TrophyTitleID, ALog);
+      UploadDir(FTP,
+        TPath.Combine(ABackupDir, 'user\trophy\conf\' + Trophy.TrophyTitleID),
+        '/user/trophy/conf/' + Trophy.TrophyTitleID, ALog);
+    end;
+    ClearRemoteDir(FTP, '/user/home/' + UserID + '/trophy/data/sce_trop', ALog);
+  finally
+    if Assigned(FTP) and FTP.Connected then FTP.Disconnect;
+    FTP.Free;
+    try
+      TDirectory.Delete(WorkDir, True);
+    except
+    end;
+  end;
 end;
 
 procedure DeletePS4TrophiesForUser(const AHost: string; APort: Word;

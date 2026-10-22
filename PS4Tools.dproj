@@ -73,7 +73,7 @@
         <UWP_DelphiLogo44>$(BDS)\bin\Artwork\Windows\UWP\delphi_UwpDefault_44.png</UWP_DelphiLogo44>
         <UWP_DelphiLogo150>$(BDS)\bin\Artwork\Windows\UWP\delphi_UwpDefault_150.png</UWP_DelphiLogo150>
         <SanitizedProjectName>PS4Tools</SanitizedProjectName>
-        <Custom_Styles>Carbon|VCLSTYLE|$(BDSCOMMONDIR)\Styles\Carbon.vsf</Custom_Styles>
+        <Custom_Styles>&quot;Windows11 MineShaft|VCLSTYLE|$(BDSCOMMONDIR)\Styles\Windows11_MineShaft.vsf&quot;;Carbon|VCLSTYLE|$(BDSCOMMONDIR)\Styles\Carbon.vsf;&quot;Windows10 BlackPearl|VCLSTYLE|$(BDSCOMMONDIR)\Styles\Windows10BlackPearl.vsf&quot;</Custom_Styles>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Base_Win32)'!=''">
         <DCC_UsePackage>dxPScxCommonRS29;dxPSdxChartControlLnkRS29;dxRibbonRS29;vclwinx;dxPScxExtCommonRS29;frReportFiles;dxRichEditControlCoreRS29;fmx;dxSpreadSheetReportDesignerRS29;vclie;DbxCommonDriver;bindengine;IndyIPCommon;VCLRESTComponents;FireDACCommonODBC;dxComnRS29;dxFlowChartDesignerRS29;appanalytics;IndyProtocols;vclx;Skia.Package.RTL;dxBarExtDBItemsRS29;dbxcds;vcledge;cxVerticalGridRS29;FmxTeeUI;cxFireDACAdaptersRS29;dxPSDBTeeChartRS29;cxSchedulerWebServiceStorageRS29;dxRichEditControlRS29;dxPsPrVwAdvRS29;FireDACSqliteDriver;DbxClientDriver;dxPSdxGaugeControlLnkRS29;soapmidas;dxRibbonCustomizationFormRS29;TeeUI;dbexpress;dxEMFRS29;dxDockingRS29;inet;vcltouch;dxPSdxFCLnkRS29;dxorgcRS29;dxSpreadSheetCoreConditionalFormattingDialogsRS29;fmxdae;dxPSRichEditControlLnkRS29;dxPSdxSpreadSheetLnkRS29;CustomIPTransport;frDBXFiles;cxADOAdaptersRS29;dxPSPrVwRibbonRS29;IndySystem;dxPScxTLLnkRS29;frTeeChartFiles;dxPSdxDBOCLnkRS29;dxGDIPlusRS29;vclFireDAC;dxPSCoreRS29;dxSpreadSheetRS29;FireDACCommon;dxPSdxMapControlLnkRS29;cxGridEMFRS29;dxGanttControlRS29;dxPScxVGridLnkRS29;dxPScxPivotGridLnkRS29;dxADOServerModeRS29;dxWizardControlRS29;bindcompdbx;rtl;FireDACMySQLDriver;dxCloudServiceLibraryRS29;dxServerModeRS29;frce;DBXSqliteDriver;dxBarDBNavRS29;dxSpreadSheetCoreRS29;dxNavBarRS29;vclimg;inetdbxpress;FireDAC;xmlrtl;dxFireDACEMFRS29;dsnap;dxPSdxLCLnkRS29;fmxobj;bindcompvclsmp;dxPSLnksRS29;dxmdsRS29;dxPSdxOCLnkRS29;cxSchedulerGridRS29;dxPScxSchedulerLnkRS29;dxADOEMFRS29;dxChartControlRS29;dxPSdxDBTVLnkRS29;FireDACCommonDriver;dxGaugeControlRS29;IndyIPClient;dxPDFViewerRS29;bindcompvclwinx;dxOrgChartAdvancedCustomizeFormRS29;dxBarExtItemsRS29;bindcompfmx;dxFlowChartLayoutsRS29;inetdb;dxdborRS29;Tee;dxPScxGridLnkRS29;cxPivotGridChartRS29;vclactnband;fmxFireDAC;cxTreeListdxBarPopupMenuRS29;dxRichEditCoreRS29;DBXMySQLDriver;dxFlowChartAdvancedCustomizeFormRS29;VclSmp;cxSchedulerRibbonStyleEventEditorRS29;dxPSTeeChartRS29;fmxase;dxtrmdRS29;dxFlowChartRS29;dbrtl;dxPScxPCProdRS29;Skia.Package.FMX;TeeDB;FireDACMSAccDriver;dxSpellCheckerRS29;cxGridRS29;dxRichEditDocumentModelRS29;dxMapControlRS29;vcldsnap;DBXInterBaseDriver;cxLibraryRS29;Skia.Package.VCL;vcldb;dxPSdxPDFViewerLnkRS29;cxSchedulerTreeBrowserRS29;bindcomp;dxTabbedMDIRS29;cxExportRS29;IndyCore;RESTBackendComponents;dxTileControlRS29;dxHttpIndyRequestRS29;dxFireDACServerModeRS29;cxPivotGridOLAPRS29;FireDACADSDriver;RESTComponents;IndyIPServer;vcl;dsnapxml;adortl;dsnapcon;dxCoreRS29;dxdbtrRS29;cxPivotGridRS29;dxSkinsCoreRS29;FireDACPgDriver;dxBarRS29;tethering;bindcompvcl;CloudService;dxSpreadSheetConditionalFormattingDialogsRS29;cxTreeListRS29;FMXTee;soaprtl;dxDBXServerModeRS29;cxSchedulerRS29;soapserver;FireDACIBDriver;$(DCC_UsePackage)</DCC_UsePackage>
@@ -109,10 +109,10 @@
         <VerInfo_IncludeVerInfo>true</VerInfo_IncludeVerInfo>
         <VerInfo_Locale>1033</VerInfo_Locale>
         <DCC_DcuOutput>.\dcu</DCC_DcuOutput>
-        <DCC_ExeOutput>.\$(Platform)\$(Config)\PS4Tools</DCC_ExeOutput>
-        <UWP_DelphiLogo44>components\icons8-playstation-windows-11-color-favicons\web\icons8-playstation-windows-11-color-70.png</UWP_DelphiLogo44>
-        <UWP_DelphiLogo150>components\icons8-playstation-windows-11-color-favicons\web\icons8-playstation-windows-11-color-96.png</UWP_DelphiLogo150>
-        <Icon_MainIcon>components\icons8_playstation.ico</Icon_MainIcon>
+        <DCC_ExeOutput>C:\PS4Tools</DCC_ExeOutput>
+        <UWP_DelphiLogo44>core\icons8-playstation-windows-11-color-favicons\web\icons8-playstation-windows-11-color-70.png</UWP_DelphiLogo44>
+        <UWP_DelphiLogo150>core\icons8-playstation-windows-11-color-favicons\web\icons8-playstation-windows-11-color-96.png</UWP_DelphiLogo150>
+        <Icon_MainIcon>core\icons8_playstation.ico</Icon_MainIcon>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_1_Win64)'!=''">
         <AppDPIAwarenessMode>PerMonitorV2</AppDPIAwarenessMode>
@@ -137,9 +137,12 @@
             <Form>FormMain</Form>
         </DCCReference>
         <DCCReference Include="sources\UnitFunctions.pas"/>
-    <DCCReference Include="sources\UnitSaves.pas"/>
+        <DCCReference Include="sources\UnitSaves.pas"/>
         <DCCReference Include="sources\UnitTranslations.pas"/>
         <DCCReference Include="sources\UnitTropheus.pas"/>
+        <DCCReference Include="sources\UnitAvatar.pas"/>
+        <DCCReference Include="sources\UnitAvatarCrop.pas"/>
+        <DCCReference Include="sources\UnitAvatarMask.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>
@@ -169,20 +172,20 @@
                 </Source>
             </Delphi.Personality>
             <Deployment Version="4">
-                <DeployFile LocalName="Win32\Debug\PS4Tools\PS4Tools.exe" Configuration="Debug" Class="ProjectOutput">
+                <DeployFile LocalName="C:\PS4Tools\PS4Tools.exe" Configuration="Debug" Class="ProjectOutput">
                     <Platform Name="Win32">
                         <RemoteName>PS4Tools.exe</RemoteName>
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>
-                <DeployFile LocalName="components\icons8-playstation-windows-11-color-favicons\web\icons8-playstation-windows-11-color-70.png" Configuration="Debug" Class="UWP_DelphiLogo44">
+                <DeployFile LocalName="core\icons8-playstation-windows-11-color-favicons\web\icons8-playstation-windows-11-color-70.png" Configuration="Debug" Class="UWP_DelphiLogo44">
                     <Platform Name="Win32">
                         <RemoteDir>Assets\</RemoteDir>
                         <RemoteName>Logo44x44.png</RemoteName>
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>
-                <DeployFile LocalName="components\icons8-playstation-windows-11-color-favicons\web\icons8-playstation-windows-11-color-96.png" Configuration="Debug" Class="UWP_DelphiLogo150">
+                <DeployFile LocalName="core\icons8-playstation-windows-11-color-favicons\web\icons8-playstation-windows-11-color-96.png" Configuration="Debug" Class="UWP_DelphiLogo150">
                     <Platform Name="Win32">
                         <RemoteDir>Assets\</RemoteDir>
                         <RemoteName>Logo150x150.png</RemoteName>

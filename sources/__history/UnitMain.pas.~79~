@@ -1,0 +1,2703 @@
+﻿unit UnitMain;
+
+interface
+
+uses
+  Winapi.Windows, Winapi.Messages,
+  System.SysUtils, System.Classes, System.UITypes, System.IOUtils,
+  System.IniFiles,
+  Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.FileCtrl, Vcl.StdCtrls,
+  Vcl.CheckLst, Vcl.ComCtrls, Vcl.ExtCtrls,
+  UnitSaves, UnitTranslations, UnitTropheus, UnitAvatar, Vcl.Buttons, Vcl.ExtDlgs;
+
+type
+  TFormMain = class(TForm)
+    Panel2: TPanel;
+    Panel3: TPanel;
+    gbOperations: TGroupBox;
+    GroupBox5: TGroupBox;
+    PageControl: TPageControl;
+    memLog: TMemo;
+    tsSaves: TTabSheet;
+    lblSyncMode: TLabel;
+    cmbSyncMode: TComboBox;
+    btnSavesStartSink: TButton;
+    btnSavesDelete: TButton;
+    GroupBox2: TGroupBox;
+    tbTropheus: TTabSheet;
+    Panel1: TPanel;
+    gbMain: TGroupBox;
+    gbIPRight: TGroupBox;
+    edtIpRight: TEdit;
+    GroupBox1: TGroupBox;
+    cmbLanguage: TComboBox;
+    btnLoadUsers: TButton;
+    btnExportLeft: TButton;
+    btnExportRight: TButton;
+    BitBtnSelectAllLeft: TBitBtn;
+    BitBtnSelectNoneLeft: TBitBtn;
+    BitBtnSelectAllRight: TBitBtn;
+    BitBtnSelectNoneRight: TBitBtn;
+    btnImportRight: TButton;
+    btnImportLeft: TButton;
+    btnCopyRight: TButton;
+    btnCopyLeft: TButton;
+    btnTrophiesDeleteLeft: TButton;
+    btnTrophiesDeleteRight: TButton;
+    btnSortLeft: TButton;
+    btnSortRight: TButton;
+    btnBackupRight: TButton;
+    btnRestoreRight: TButton;
+    btnBackupLeft: TButton;
+    btnRestoreLeft: TButton;
+    btnTropiesLoadLeft: TButton;
+    btnLoadRight: TButton;
+    btnLoadSaveRight: TButton;
+    btnSavesLoadLeft: TButton;
+    Panel4: TPanel;
+    GroupBox3: TGroupBox;
+    gbUserLeft: TGroupBox;
+    cmbUserLeft: TComboBox;
+    gbUserRight: TGroupBox;
+    cmbUserRight: TComboBox;
+    BitBtnTropheuSelectAllLeft: TBitBtn;
+    BitBtnTropheuSelectNoneLeft: TBitBtn;
+    BitBtnTropheuSelectAllRight: TBitBtn;
+    BitBtnTropheuSelectAllNone: TBitBtn;
+    Panel5: TPanel;
+    pbSync: TProgressBar;
+    tsAvatar: TTabSheet;
+    imgPreview: TImage;
+    btnBrowse: TButton;
+    OpenPictureDialog: TOpenPictureDialog;
+    lblHint: TLabel;
+    cmbConverter: TComboBox;
+    lblConverter: TLabel;
+    chkKeepLocal: TCheckBox;
+    chkTransparent: TCheckBox;
+    edtImage: TEdit;
+    lblImage: TLabel;
+    edtName: TEdit;
+    lblName: TLabel;
+    lblDescUser: TLabel;
+    btnCreate: TButton;
+    btnSend: TButton;
+    tbGamesList: TTabSheet;
+    gbIPLeft: TGroupBox;
+    edtIpLeft: TEdit;
+    gbOperationMode: TGroupBox;
+    cbOperationMode: TComboBox;
+    gbSaveSource: TGroupBox;
+    gbSaveDestiny: TGroupBox;
+    clbSavesLeft: TCheckListBox;
+    clbSavesRight: TCheckListBox;
+    gbTrophiesSource: TGroupBox;
+    gbTrophiesDestiny: TGroupBox;
+    lvLeft: TListView;
+    lvRight: TListView;
+    btnTrophiesStartSink: TButton;
+    procedure btnAvatarBrowseClick(Sender: TObject);
+    procedure btnAvatarCreateClick(Sender: TObject);
+    procedure btnAvatarSendClick(Sender: TObject);
+    procedure btnLoadUsersClick(Sender: TObject);
+    procedure btnLeftSelectAllClick(Sender: TObject);
+    procedure btnLeftSelectNoneClick(Sender: TObject);
+    procedure btnRightSelectAllClick(Sender: TObject);
+    procedure btnRightSelectNoneClick(Sender: TObject);
+    procedure btnSavesStartSinkClick(Sender: TObject);
+    procedure btnStartExportClick(Sender: TObject);
+    procedure btnStartImportClick(Sender: TObject);
+    procedure SelectAllImportClick(Sender: TObject);
+    procedure btnBackupRightClick(Sender: TObject);
+    procedure btnRestoreRightClick(Sender: TObject);
+    procedure btnBackupLeftClick(Sender: TObject);
+    procedure btnRestoreLeftClick(Sender: TObject);
+    procedure btnLoadTrophiesLeftClick(Sender: TObject);
+    procedure btnLoadTrophiesRightClick(Sender: TObject);
+    procedure btnCopyRightClick(Sender: TObject);
+    procedure btnCopyLeftClick(Sender: TObject);
+    procedure btnTrophiesDeleteLeftClick(Sender: TObject);
+    procedure btnTrophiesDeleteRightClick(Sender: TObject);
+    procedure btnSortLeftClick(Sender: TObject);
+    procedure btnSortRightClick(Sender: TObject);
+    procedure btnLeftAllClick(Sender: TObject);
+    procedure btnLeftNoneClick(Sender: TObject);
+    procedure btnRightAllClick(Sender: TObject);
+    procedure btnRightNoneClick(Sender: TObject);
+    procedure btnExportLeftClick(Sender: TObject);
+    procedure btnExportRightClick(Sender: TObject);
+    procedure btnImportLeftClick(Sender: TObject);
+    procedure btnImportRightClick(Sender: TObject);
+    procedure clbSavesLeftDrawItem(Control: TWinControl; Index: Integer;
+      Rect: TRect; State: TOwnerDrawState);
+    procedure FormShow(Sender: TObject);
+    procedure FormClose(Sender: TObject; var Action: TCloseAction);
+    procedure cmbLanguageChange(Sender: TObject);
+    procedure cmbUserLeftChange(Sender: TObject);
+    procedure cmbUserRightChange(Sender: TObject);
+    procedure btnSavesDeleteClick(Sender: TObject);
+    procedure BitBtnSelectAllLeftClick(Sender: TObject);
+    procedure BitBtnSelectNoneLeftClick(Sender: TObject);
+    procedure BitBtnSelectAllRightClick(Sender: TObject);
+    procedure BitBtnSelectNoneRightClick(Sender: TObject);
+    procedure btnSavesLoadLeftClick(Sender: TObject);
+    procedure btnLoadSaveRightClick(Sender: TObject);
+    procedure BitBtnTropheuSelectNoneLeftClick(Sender: TObject);
+    procedure BitBtnTropheuSelectAllLeftClick(Sender: TObject);
+    procedure BitBtnTropheuSelectAllRightClick(Sender: TObject);
+    procedure BitBtnTropheuSelectAllNoneClick(Sender: TObject);
+    procedure cbOperationModeChange(Sender: TObject);
+    procedure FormCreate(Sender: TObject);
+  private
+    FLeftUsers: TArray<TPS4SaveUser>;
+    FDestUsers: TArray<TPS4SaveUser>;
+    FSaves: TArray<TPS4SaveGame>;
+    FViewSaves: TArray<TPS4SaveGame>;
+    FDestSaves: TArray<TPS4SaveGame>;
+    FDestViewSaves: TArray<TPS4SaveGame>;
+    FTrophiesLeft: TArray<TPS4TrophyTitle>;
+    FTrophiesRight: TArray<TPS4TrophyTitle>;
+    FLoadedLeftIP: string;
+    FLoadedLeftUserID: string;
+    FDestSavesLoaded: Boolean;
+    FAgentAutoChecked: Boolean;
+    FLoadingUsers: Boolean;
+    FLeftUserActivated: Boolean;
+    FDestUserActivated: Boolean;
+    FSettingsLoaded: Boolean;
+    FTranslationsInitialized: Boolean;
+    FRestoreBackupBaseDir: string;
+    FRestoreBackupUsers: TStringList;
+    FRestoreTrophyList: TCheckListBox;
+    FCurrentLanguage: TAppLanguage;
+    FAvatar: TAvatarController;
+    procedure AddLog(const AMsg: string);
+    procedure SetStatus(const AMsg: string);
+    procedure UpdateSyncProgress(const AMsg: string; APosition, AMax: Int64);
+    procedure ResetSyncProgress;
+    procedure BackupTrophySide(AIsLeft: Boolean);
+    procedure RestoreTrophySide(AIsLeft: Boolean);
+    procedure LoadTrophySide(AIsLeft: Boolean);
+    function SelectedTrophies(AList: TListView;
+      const ATrophies: TArray<TPS4TrophyTitle>): TArray<TPS4TrophyTitle>;
+    function CountExistingTitles(const AItems, ADestItems: TArray<TPS4TrophyTitle>): Integer;
+    procedure CopySelected(AFromLeft: Boolean);
+    procedure DeleteTrophySide(AIsLeft: Boolean);
+    procedure SortTrophySide(AIsLeft: Boolean);
+    procedure RunWorker(const AWork: TProc; const AOnSuccess: TProc;
+      const AErrorPrefix: string; const AOnFinished: TProc = nil);
+    procedure SetBusy(ABusy: Boolean);
+    procedure LoadLeftSavesForSelectedUser;
+    procedure LoadDestSavesForSelectedUser;
+    procedure ValidateLeftUserAndLoadSaves;
+    procedure ValidateDestUserAndLoadSaves;
+    procedure UncheckAllSaves;
+    function ActivationHelpText(const AUserID: string): string;
+    function IsAutomaticSyncMode: Boolean;
+    function IsValidUserID(const AUserID: string): Boolean;
+    procedure AppendValidUser(var AUsers: TArray<TPS4SaveUser>;
+      const AUser: TPS4SaveUser);
+    procedure FillSaveList(AList: TCheckListBox;
+      const ASaves: TArray<TPS4SaveGame>; const AUserID: string;
+      var AViewSaves: TArray<TPS4SaveGame>; AChecked: Boolean);
+    function TryFindDestSave(const ASave: TPS4SaveGame;
+      out ADestSave: TPS4SaveGame): Boolean;
+    function IsNewLeftSave(AIndex: Integer): Boolean;
+    procedure LoadSettings;
+    procedure SaveSettings;
+    procedure InitializeLanguageCombo;
+    procedure ApplyTranslations;
+    procedure ShowLocalizedMessage(const AMessage: string);
+    procedure UpdateRestoreTrophyList(Sender: TObject);
+    procedure UpdateSideEnabled(AIsLeft, AEnabled: Boolean);
+    procedure UpdateUserDependentEnabled;
+    procedure SetAvatarControlsEnabled(AEnabled: Boolean);
+  public
+    procedure SetDefaultIP(const AIP: string);
+    procedure SetDefaultDestIP(const AIP: string);
+    function GetDestIP: string;
+  end;
+
+var
+  ImportSelectionList: TCheckListBox;
+
+var
+  FormMain: TFormMain;
+
+implementation
+
+{$R *.dfm}
+
+const
+  PS4_FTP_PORT = 2121;
+  DECRYPTED_BACKUP_FOLDER = 'Saves descriptografados';
+
+procedure TFormMain.SetDefaultIP(const AIP: string);
+begin
+  edtIpLeft.Text := AIP;
+end;
+
+procedure TFormMain.SetDefaultDestIP(const AIP: string);
+begin
+  edtIpRight.Text := AIP;
+end;
+
+function TFormMain.GetDestIP: string;
+begin
+  Result := Trim(edtIpRight.Text);
+end;
+
+procedure TFormMain.AddLog(const AMsg: string);
+begin
+  if Trim(AMsg) = '' then
+    Exit;
+  if GetCurrentThreadId <> MainThreadID then
+  begin
+    TThread.Queue(nil,
+      procedure
+      begin
+        if csDestroying in ComponentState then Exit;
+        AddLog(AMsg);
+      end);
+    Exit;
+  end;
+
+  memLog.Lines.Add(FormatDateTime('hh:nn:ss', Now) + '  ' +
+    TranslateText(AMsg, FCurrentLanguage));
+  memLog.SelStart := memLog.GetTextLen;
+  memLog.Perform(EM_SCROLLCARET, 0, 0);
+  SetStatus(AMsg);
+end;
+
+procedure TFormMain.ShowLocalizedMessage(const AMessage: string);
+begin
+  ShowMessage(TranslateText(AMessage, FCurrentLanguage));
+end;
+
+procedure TFormMain.SetStatus(const AMsg: string);
+begin
+  if GetCurrentThreadId <> MainThreadID then
+  begin
+    TThread.Queue(nil,
+      procedure
+      begin
+        if csDestroying in ComponentState then Exit;
+        SetStatus(AMsg);
+      end);
+    Exit;
+  end;
+
+  
+end;
+
+procedure TFormMain.UpdateSyncProgress(const AMsg: string;
+  APosition, AMax: Int64);
+var
+  Percent: Integer;
+begin
+  if GetCurrentThreadId <> MainThreadID then
+  begin
+    TThread.Queue(nil,
+      procedure
+      begin
+        if csDestroying in ComponentState then Exit;
+        UpdateSyncProgress(AMsg, APosition, AMax);
+      end);
+    Exit;
+  end;
+
+  if AMax > 0 then
+  begin
+    pbSync.Style := pbstNormal;
+    Percent := Round((APosition * 100) / AMax);
+    if Percent < 0 then Percent := 0;
+    if Percent > 100 then Percent := 100;
+    pbSync.Position := Percent;
+    SetStatus(Format('%s %d%%', [AMsg, Percent]));
+  end
+  else
+  begin
+    pbSync.Position := 0;
+    SetStatus(AMsg);
+  end;
+end;
+
+procedure TFormMain.ResetSyncProgress;
+begin
+  if GetCurrentThreadId <> MainThreadID then
+  begin
+    TThread.Queue(nil,
+      procedure
+      begin
+        if csDestroying in ComponentState then Exit;
+        ResetSyncProgress;
+      end);
+    Exit;
+  end;
+
+  pbSync.Style := pbstNormal;
+  pbSync.Position := 0;
+end;
+
+procedure TFormMain.RunWorker(const AWork: TProc; const AOnSuccess: TProc;
+  const AErrorPrefix: string; const AOnFinished: TProc);
+var
+  Worker: TThread;
+begin
+  SetBusy(True);
+  SetStatus('Processando...');
+  Worker := TThread.CreateAnonymousThread(
+    procedure
+    var
+      ErrorMsg: string;
+      Success: Boolean;
+    begin
+      ErrorMsg := '';
+      Success := False;
+      try
+        AWork();
+        Success := True;
+      except
+        on E: Exception do
+          ErrorMsg := E.Message;
+      end;
+
+      TThread.Queue(nil,
+        procedure
+        begin
+          if csDestroying in ComponentState then Exit;
+          SetBusy(False);
+          try
+            if Success then
+            begin
+              if Assigned(AOnSuccess) then
+                AOnSuccess();
+            end
+            else
+            begin
+              AddLog(AErrorPrefix + ErrorMsg);
+              SetStatus(AErrorPrefix + ErrorMsg);
+              ShowLocalizedMessage(AErrorPrefix + ErrorMsg);
+            end;
+          finally
+            if Assigned(AOnFinished) then
+              AOnFinished();
+          end;
+        end);
+    end);
+  Worker.FreeOnTerminate := True;
+  Worker.Start;
+end;
+
+procedure TFormMain.SetBusy(ABusy: Boolean);
+begin
+  btnLoadUsers.Enabled := not ABusy;
+  BitBtnSelectAllLeft.Enabled := not ABusy;
+  BitBtnSelectNoneLeft.Enabled := not ABusy;
+  btnSavesStartSink.Enabled := not ABusy;
+  btnTrophiesStartSink.Enabled := btnSavesStartSink.Enabled;
+  btnSavesDelete.Enabled := not ABusy;
+  edtIpLeft.Enabled := not ABusy;
+  edtIpRight.Enabled := not ABusy;
+  cmbUserLeft.Enabled := not ABusy;
+  cmbUserRight.Enabled := not ABusy;
+  cmbSyncMode.Enabled := not ABusy;
+  clbSavesLeft.Enabled := not ABusy;
+  clbSavesRight.Enabled := not ABusy;
+  if not ABusy then
+    UpdateUserDependentEnabled;
+  if ABusy then
+  begin
+    pbSync.Style := pbstMarquee;
+    pbSync.Position := 0;
+    { A operacao roda em thread; nao transformar o cursor em espera global. }
+    Screen.Cursor := crDefault;
+  end
+  else
+  begin
+    pbSync.Style := pbstNormal;
+    pbSync.Position := 0;
+    Screen.Cursor := crDefault;
+  end;
+end;
+
+procedure TFormMain.UpdateSideEnabled(AIsLeft, AEnabled: Boolean);
+begin
+  if AIsLeft then
+  begin
+    BitBtnSelectAllLeft.Enabled := AEnabled;
+    BitBtnSelectNoneLeft.Enabled := AEnabled;
+    clbSavesLeft.Enabled := AEnabled;
+    btnExportLeft.Enabled := AEnabled;
+    btnImportLeft.Enabled := AEnabled;
+    lvLeft.Enabled := AEnabled;
+    btnCopyRight.Enabled := AEnabled;
+    btnTrophiesDeleteLeft.Enabled := AEnabled;
+    btnSortLeft.Enabled := AEnabled;
+    btnBackupLeft.Enabled := AEnabled;
+    btnRestoreLeft.Enabled := AEnabled;
+    btnTropiesLoadLeft.Enabled := AEnabled;
+    btnSavesLoadLeft.Enabled := AEnabled;
+    BitBtnTropheuSelectAllLeft.Enabled := AEnabled;
+    BitBtnTropheuSelectNoneLeft.Enabled := AEnabled;
+  end
+  else
+  begin
+    BitBtnSelectAllRight.Enabled := AEnabled;
+    BitBtnSelectNoneRight.Enabled := AEnabled;
+    clbSavesRight.Enabled := AEnabled;
+    btnExportRight.Enabled := AEnabled;
+    btnImportRight.Enabled := AEnabled;
+    lvRight.Enabled := AEnabled;
+    btnCopyLeft.Enabled := AEnabled;
+    btnTrophiesDeleteRight.Enabled := AEnabled;
+    btnSortRight.Enabled := AEnabled;
+    btnBackupRight.Enabled := AEnabled;
+    btnRestoreRight.Enabled := AEnabled;
+    btnLoadRight.Enabled := AEnabled;
+    btnLoadSaveRight.Enabled := AEnabled;
+    BitBtnTropheuSelectAllRight.Enabled := AEnabled;
+    BitBtnTropheuSelectAllNone.Enabled := AEnabled;
+  end;
+end;
+
+procedure TFormMain.UpdateUserDependentEnabled;
+begin
+  UpdateSideEnabled(True, cmbUserLeft.ItemIndex >= 0);
+  UpdateSideEnabled(False, cmbUserRight.ItemIndex >= 0);
+end;
+
+procedure TFormMain.SetAvatarControlsEnabled(AEnabled: Boolean);
+var
+  I: Integer;
+  procedure SetControlTree(AControl: TControl);
+  var
+    J: Integer;
+  begin
+    AControl.Enabled := AEnabled;
+    if AControl is TWinControl then
+      for J := 0 to TWinControl(AControl).ControlCount - 1 do
+        SetControlTree(TWinControl(AControl).Controls[J]);
+  end;
+begin
+  for I := 0 to tsAvatar.ControlCount - 1 do
+    SetControlTree(tsAvatar.Controls[I]);
+end;
+
+procedure TFormMain.BitBtnSelectAllRightClick(Sender: TObject);
+var
+  I: Integer;
+begin
+  for I := 0 to clbSavesRight.Items.Count - 1 do
+    clbSavesRight.Checked[I] := True;
+end;
+
+procedure TFormMain.BitBtnSelectNoneRightClick(Sender: TObject);
+var
+  I: Integer;
+begin
+  for I := 0 to clbSavesRight.Items.Count - 1 do
+    clbSavesRight.Checked[I] := False;
+end;
+
+procedure TFormMain.BitBtnTropheuSelectAllLeftClick(Sender: TObject);
+var
+  I: Integer;
+begin
+  for I := 0 to lvLeft.Items.Count - 1 do
+    lvLeft.Items[I].Checked := True;
+end;
+
+procedure TFormMain.BitBtnTropheuSelectAllNoneClick(Sender: TObject);
+var
+  I: Integer;
+begin
+  for I := 0 to lvRight.Items.Count - 1 do
+    lvRight.Items[I].Checked := False;
+end;
+
+procedure TFormMain.BitBtnTropheuSelectAllRightClick(Sender: TObject);
+var
+  I: Integer;
+begin
+  for I := 0 to lvRight.Items.Count - 1 do
+    lvRight.Items[I].Checked := True;
+end;
+
+procedure TFormMain.BitBtnTropheuSelectNoneLeftClick(Sender: TObject);
+var
+  I: Integer;
+begin
+  for I := 0 to lvLeft.Items.Count - 1 do
+    lvLeft.Items[I].Checked := False;
+end;
+
+procedure TFormMain.BitBtnSelectAllLeftClick(Sender: TObject);
+var
+  I: Integer;
+begin
+  for I := 0 to clbSavesLeft.Items.Count - 1 do
+    clbSavesLeft.Checked[I] := True;
+end;
+
+procedure TFormMain.BitBtnSelectNoneLeftClick(Sender: TObject);
+var
+  I: Integer;
+begin
+  for I := 0 to clbSavesLeft.Items.Count - 1 do
+    clbSavesLeft.Checked[I] := False;
+  for I := 0 to clbSavesRight.Items.Count - 1 do
+    clbSavesRight.Checked[I] := False;
+end;
+
+procedure TFormMain.FormShow(Sender: TObject);
+begin
+  FAvatar.imgPreview := imgPreview;
+  FAvatar.edtImage := edtImage;
+  FAvatar.edtName := edtName;
+  FAvatar.cmbConverter := cmbConverter;
+  FAvatar.chkTransparent := chkTransparent;
+  FAvatar.chkKeepLocal := chkKeepLocal;
+  FAvatar.btnBrowse := btnBrowse;
+  FAvatar.btnCreate := btnCreate;
+  FAvatar.btnSend := btnSend;
+  FAvatar.OpenPictureDialog := OpenPictureDialog;
+  FAvatar.memLog := memLog;
+  FAvatar.pbProgress := pbSync;
+  FAvatar.lblHint := lblHint;
+  FAvatar.CurrentLanguage := FCurrentLanguage;
+  FAvatar.FHost := edtIpRight.Text;
+  FAvatar.FUser := '';
+  FAvatar.FLastProfile := '';
+  FAvatar.LoadSettings;
+  if not FTranslationsInitialized then
+  begin
+    InitializeLanguageCombo;
+    FTranslationsInitialized := True;
+  end;
+  if not FSettingsLoaded then
+  begin
+    LoadSettings;
+    FSettingsLoaded := True;
+  end;
+  ApplyTranslations;
+  if cmbSyncMode.ItemIndex < 0 then
+    cmbSyncMode.ItemIndex := 0;
+  cmbUserLeft.Enabled := False;
+  cmbUserRight.Enabled := False;
+  SetAvatarControlsEnabled(False);
+  cmbSyncMode.Enabled := False;
+  btnSavesStartSink.Enabled := False;
+  btnTrophiesStartSink.Enabled := btnSavesStartSink.Enabled;
+  btnSavesDelete.Enabled := False;
+  BitBtnSelectAllLeft.Enabled := False;
+  BitBtnSelectNoneLeft.Enabled := False;
+  BitBtnSelectAllRight.Enabled := False;
+  BitBtnSelectNoneRight.Enabled := False;
+  UpdateSideEnabled(True, False);
+  UpdateSideEnabled(False, False);
+  if FAgentAutoChecked then Exit;
+  FAgentAutoChecked := True;
+//  if IsAutomaticSyncMode then
+//    AutoPrepareSaveAgents;
+end;
+
+procedure TFormMain.InitializeLanguageCombo;
+var
+  LLanguage: TAppLanguage;
+begin
+  cmbLanguage.Items.BeginUpdate;
+  try
+    cmbLanguage.Items.Clear;
+    for LLanguage := Low(TAppLanguage) to High(TAppLanguage) do
+      cmbLanguage.Items.Add(LanguageName(LLanguage));
+    if cmbLanguage.ItemIndex < Ord(Low(TAppLanguage)) then
+      cmbLanguage.ItemIndex := Ord(alPortugueseBrazil);
+  finally
+    cmbLanguage.Items.EndUpdate;
+  end;
+  FCurrentLanguage := TAppLanguage(cmbLanguage.ItemIndex);
+end;
+
+procedure TFormMain.ApplyTranslations;
+var
+  LText: TTranslations;
+begin
+  if (cmbLanguage.ItemIndex < Ord(Low(TAppLanguage))) or
+     (cmbLanguage.ItemIndex > Ord(High(TAppLanguage))) then
+    Exit;
+
+  FCurrentLanguage := TAppLanguage(cmbLanguage.ItemIndex);
+  FAvatar.CurrentLanguage := FCurrentLanguage;
+  LText := GetTranslations(FCurrentLanguage);
+
+  Caption := LText.FormCaption;
+  gbIPLeft.Caption := '[ ' + LText.LeftIP + ' ]';
+  gbIPRight.Caption := '[ ' + LText.RightIP + ' ]';
+  GroupBox1.Caption := '[ ' + LText.Language + ' ]';
+  gbUserLeft.Caption := '[ ' + LText.LeftUser + ' ]';
+  gbUserRight.Caption := '[ ' + LText.RightUser + ' ]';
+  gbSaveSource.Caption := '[ ' + LText.LeftUser + ' ]';
+  gbSaveDestiny.Caption := '[ ' + LText.RightUser + ' ]';
+  gbTrophiesSource.Caption := '[ ' + LText.LeftUser + ' ]';
+  gbTrophiesDestiny.Caption := '[ ' + LText.RightUser + ' ]';
+  gbOperationMode.Caption := '[ ' + LText.OperationMode + ' ]';
+  cbOperationMode.Items.BeginUpdate;
+  try
+    cbOperationMode.Items.Clear;
+    cbOperationMode.Items.Add(LText.SamePlayStation);
+    cbOperationMode.Items.Add(LText.OtherPlayStation);
+    cbOperationMode.ItemIndex := 0;
+  finally
+    cbOperationMode.Items.EndUpdate;
+  end;
+  lblConverter.Caption := LText.Converter;
+  lblImage.Caption := LText.Image;
+  lblName.Caption := LText.Name;
+  chkKeepLocal.Caption := LText.SaveLocally;
+  chkTransparent.Caption := LText.TransparentBackground;
+  OpenPictureDialog.Filter := LText.ImageFilter;
+  cmbConverter.Items.BeginUpdate;
+  try
+    cmbConverter.Items.Clear;
+    cmbConverter.Items.Add(LText.ConverterTexconv);
+    cmbConverter.Items.Add(LText.ConverterInternal);
+    cmbConverter.ItemIndex := 0;
+  finally
+    cmbConverter.Items.EndUpdate;
+  end;
+  lblSyncMode.Caption := LText.SyncType;
+  btnLoadUsers.Caption := LText.LoadUsers;
+  BitBtnSelectAllLeft.Caption := '';
+  BitBtnSelectNoneLeft.Caption := '';
+  BitBtnSelectAllRight.Caption := '';
+  BitBtnSelectNoneRight.Caption := '';
+  BitBtnSelectAllLeft.Hint := LText.SelectAll;
+  BitBtnSelectNoneLeft.Hint := LText.SelectNone;
+  BitBtnSelectAllRight.Hint := LText.SelectAll;
+  BitBtnSelectNoneRight.Hint := LText.SelectNone;
+  BitBtnSelectAllLeft.ShowHint := True;
+  BitBtnSelectNoneLeft.ShowHint := True;
+  BitBtnSelectAllRight.ShowHint := True;
+  BitBtnSelectNoneRight.ShowHint := True;
+  btnSavesStartSink.Caption := LText.StartSync;
+  btnTrophiesStartSink.Caption := LText.StartSync;
+  btnExportLeft.Caption := LText.ExportSave;
+  btnExportRight.Caption := LText.ExportSave;
+  btnImportLeft.Caption := LText.ImportSave;
+  btnImportRight.Caption := LText.ImportSave;
+  btnSavesDelete.Caption := LText.Delete;
+  tsSaves.Caption := LText.SavesTab;
+  tbTropheus.Caption := LText.TrophiesTab;
+  tsAvatar.Caption := LText.AvatarTab;
+  tbGamesList.Caption := LText.GamesTab;
+  lblDescUser.Caption := LText.DescricaoUsuarioDestino;
+  lblHint.Caption := LText.AvatarHint;
+  btnBrowse.Caption := LText.AvatarBrowse;
+  btnCreate.Caption := LText.AvatarCreate;
+  btnSend.Caption := LText.AvatarSend;
+  btnBrowse.Hint := LText.AvatarHintBrowse;
+  btnCreate.Hint := LText.AvatarHintCreate;
+  btnSend.Hint := LText.AvatarHintSend;
+  btnBrowse.ShowHint := True;
+  btnCreate.ShowHint := True;
+  btnSend.ShowHint := True;
+  btnTropiesLoadLeft.Caption := LText.TrophyLoad;
+  btnLoadRight.Caption := LText.TrophyLoad;
+  btnSavesLoadLeft.Caption := LText.TrophyLoad;
+  btnLoadSaveRight.Caption := LText.TrophyLoad;
+  btnBackupLeft.Caption := LText.TrophyBackup;
+  btnBackupRight.Caption := LText.TrophyBackup;
+  btnRestoreLeft.Caption := LText.TrophyRestore;
+  btnRestoreRight.Caption := LText.TrophyRestore;
+  btnTrophiesDeleteLeft.Caption := LText.TrophyDelete;
+  btnTrophiesDeleteRight.Caption := LText.TrophyDelete;
+  btnSortLeft.Caption := LText.TrophySortLeft;
+  btnSortRight.Caption := LText.TrophySortRight;
+  btnCopyRight.Caption := LText.TrophyCopyRight;
+  btnCopyLeft.Caption := LText.TrophyCopyLeft;
+//  btnLeftAll.Caption := LText.SelectAll;
+//  btnRightAll.Caption := LText.SelectAll;
+//  btnLeftNone.Caption := LText.SelectNone;
+//  btnRightNone.Caption := LText.SelectNone;
+
+  lvLeft.Items.BeginUpdate;
+  lvRight.Items.BeginUpdate;
+  try
+    lvLeft.Columns[0].Caption := LText.TrophyColumnNPWR;
+    lvLeft.Columns[1].Caption := LText.TrophyColumnGame;
+    lvLeft.Columns[2].Caption := LText.TrophyColumnTotal;
+    lvLeft.Columns[3].Caption := LText.TrophyColumnObtained;
+    lvRight.Columns[0].Caption := LText.TrophyColumnNPWR;
+    lvRight.Columns[1].Caption := LText.TrophyColumnGame;
+    lvRight.Columns[2].Caption := LText.TrophyColumnTotal;
+    lvRight.Columns[3].Caption := LText.TrophyColumnObtained;
+  finally
+    lvRight.Items.EndUpdate;
+    lvLeft.Items.EndUpdate;
+  end;
+  lvLeft.Invalidate;
+  lvRight.Invalidate;
+  lvLeft.Refresh;
+  lvRight.Refresh;
+
+  btnLoadUsers.Hint := LText.HintConnect;
+  btnLoadUsers.ShowHint := True;
+  btnSavesStartSink.Hint := LText.HintSync;
+  btnSavesStartSink.ShowHint := True;
+  btnExportLeft.Hint := LText.HintExport;
+  btnExportRight.Hint := LText.HintExport;
+  btnImportLeft.Hint := LText.HintImport;
+  btnImportRight.Hint := LText.HintImport;
+  btnExportLeft.ShowHint := True;
+  btnExportRight.ShowHint := True;
+  btnImportLeft.ShowHint := True;
+  btnImportRight.ShowHint := True;
+  btnSavesLoadLeft.Hint := LText.HintLoad;
+  btnLoadSaveRight.Hint := LText.HintLoad;
+  btnTropiesLoadLeft.Hint := LText.HintLoad;
+  btnLoadRight.Hint := LText.HintLoad;
+  btnCopyLeft.Hint := LText.HintCopy;
+  btnCopyRight.Hint := LText.HintCopy;
+  btnTrophiesDeleteLeft.Hint := LText.HintDelete;
+  btnTrophiesDeleteRight.Hint := LText.HintDelete;
+  btnSortLeft.Hint := LText.HintSort;
+  btnSortRight.Hint := LText.HintSort;
+  btnBackupLeft.Hint := LText.HintBackup;
+  btnBackupRight.Hint := LText.HintBackup;
+  btnRestoreLeft.Hint := LText.HintRestore;
+  btnRestoreRight.Hint := LText.HintRestore;
+  BitBtnTropheuSelectAllLeft.Hint := LText.HintSelectAll;
+  BitBtnTropheuSelectNoneLeft.Hint := LText.HintSelectAll;
+  BitBtnTropheuSelectAllRight.Hint := LText.HintSelectNone;
+  BitBtnTropheuSelectAllNone.Hint := LText.HintSelectNone;
+  btnSavesLoadLeft.ShowHint := True;
+  btnLoadSaveRight.ShowHint := True;
+  btnTropiesLoadLeft.ShowHint := True;
+  btnLoadRight.ShowHint := True;
+  btnCopyLeft.ShowHint := True;
+  btnCopyRight.ShowHint := True;
+  btnTrophiesDeleteLeft.ShowHint := True;
+  btnTrophiesDeleteRight.ShowHint := True;
+  btnSortLeft.ShowHint := True;
+  btnSortRight.ShowHint := True;
+  btnBackupLeft.ShowHint := True;
+  btnBackupRight.ShowHint := True;
+  btnRestoreLeft.ShowHint := True;
+  btnRestoreRight.ShowHint := True;
+  BitBtnTropheuSelectAllLeft.ShowHint := True;
+  BitBtnTropheuSelectNoneLeft.ShowHint := True;
+  BitBtnTropheuSelectAllRight.ShowHint := True;
+  BitBtnTropheuSelectAllNone.ShowHint := True;
+
+  cmbSyncMode.Items.BeginUpdate;
+  try
+    cmbSyncMode.Items.Clear;
+    cmbSyncMode.Items.Add(LText.SyncPayload);
+    cmbSyncMode.Items.Add(LText.SyncManual);
+    if IsAutomaticSyncMode then
+      cmbSyncMode.ItemIndex := 0
+    else
+      cmbSyncMode.ItemIndex := 1;
+  finally
+    cmbSyncMode.Items.EndUpdate;
+  end;
+end;
+
+procedure TFormMain.cmbLanguageChange(Sender: TObject);
+begin
+  if FTranslationsInitialized then
+    ApplyTranslations;
+end;
+
+procedure TFormMain.LoadSettings;
+var
+  Ini: TIniFile;
+  SettingsFile: string;
+begin
+  SettingsFile := TPath.Combine(ExtractFilePath(ParamStr(0)), 'settings.ini');
+  Ini := TIniFile.Create(SettingsFile);
+  try
+    edtIpLeft.Text := Ini.ReadString('Edit', 'edtIpLeft', edtIpLeft.Text);
+    edtIpRight.Text := Ini.ReadString('Edit', 'edtIpRight', edtIpRight.Text);
+    cmbSyncMode.ItemIndex := Ini.ReadInteger('ComboBox', 'cmbSyncMode', cmbSyncMode.ItemIndex);
+    cmbUserLeft.ItemIndex := Ini.ReadInteger('ComboBox', 'cmbUserLeft', -1);
+    cmbUserRight.ItemIndex := Ini.ReadInteger('ComboBox', 'cmbUserRight', -1);
+    cmbLanguage.ItemIndex := Ini.ReadInteger('ComboBox', 'cmbLanguage', cmbLanguage.ItemIndex);
+  finally
+    Ini.Free;
+  end;
+end;
+
+procedure TFormMain.SaveSettings;
+var
+  Ini: TIniFile;
+  SettingsFile: string;
+begin
+  SettingsFile := TPath.Combine(ExtractFilePath(ParamStr(0)), 'settings.ini');
+  Ini := TIniFile.Create(SettingsFile);
+  try
+    Ini.WriteString('Edit', 'edtIpLeft', edtIpLeft.Text);
+    Ini.WriteString('Edit', 'edtIpRight', edtIpRight.Text);
+    Ini.WriteInteger('ComboBox', 'cmbSyncMode', cmbSyncMode.ItemIndex);
+    Ini.WriteInteger('ComboBox', 'cmbUserLeft', cmbUserLeft.ItemIndex);
+    Ini.WriteInteger('ComboBox', 'cmbUserRight', cmbUserRight.ItemIndex);
+    Ini.WriteInteger('ComboBox', 'cmbLanguage', cmbLanguage.ItemIndex);
+    Ini.UpdateFile;
+  finally
+    Ini.Free;
+  end;
+end;
+
+procedure TFormMain.FormClose(Sender: TObject; var Action: TCloseAction);
+begin
+  SaveSettings;
+end;
+
+procedure TFormMain.FormCreate(Sender: TObject);
+begin
+  Self.width := 770;
+end;
+
+procedure TFormMain.btnAvatarBrowseClick(Sender: TObject);
+begin
+  FAvatar.Browse;
+end;
+
+procedure TFormMain.btnAvatarCreateClick(Sender: TObject);
+begin
+  FAvatar.CreateImages;
+end;
+
+procedure TFormMain.btnAvatarSendClick(Sender: TObject);
+begin
+  if cmbUserRight.ItemIndex < 0 then
+  begin
+    ShowMessage('Selecione o usuário destino antes de enviar o avatar.');
+    Exit;
+  end;
+  FAvatar.SetTarget(edtIpRight.Text, FDestUsers[cmbUserRight.ItemIndex].UserID);
+  FAvatar.Send;
+end;
+
+function TFormMain.IsAutomaticSyncMode: Boolean;
+begin
+  Result := cmbSyncMode.ItemIndex <= 0;
+end;
+
+function TFormMain.IsValidUserID(const AUserID: string): Boolean;
+var
+  S: string;
+  I: Integer;
+begin
+  S := LowerCase(Trim(AUserID));
+  Result := (Length(S) = 8) and (S <> '.') and (S <> '..');
+  if not Result then Exit;
+
+  for I := 1 to Length(S) do
+    if not CharInSet(S[I], ['0'..'9', 'a'..'f']) then
+      Exit(False);
+end;
+
+procedure TFormMain.AppendValidUser(var AUsers: TArray<TPS4SaveUser>;
+  const AUser: TPS4SaveUser);
+begin
+  if not IsValidUserID(AUser.UserID) then Exit;
+
+  SetLength(AUsers, Length(AUsers) + 1);
+  AUsers[High(AUsers)] := AUser;
+end;
+
+procedure TFormMain.FillSaveList(AList: TCheckListBox;
+  const ASaves: TArray<TPS4SaveGame>; const AUserID: string;
+  var AViewSaves: TArray<TPS4SaveGame>; AChecked: Boolean);
+var
+  I: Integer;
+begin
+  SetLength(AViewSaves, 0);
+  AList.Items.BeginUpdate;
+  try
+    AList.Items.Clear;
+    for I := 0 to High(ASaves) do
+    begin
+      if not SameText(ASaves[I].UserID, AUserID) then Continue;
+      SetLength(AViewSaves, Length(AViewSaves) + 1);
+      AViewSaves[High(AViewSaves)] := ASaves[I];
+      AList.Items.Add(PS4SaveDisplayText(ASaves[I]));
+      AList.Checked[AList.Items.Count - 1] := AChecked;
+    end;
+  finally
+    AList.Items.EndUpdate;
+  end;
+end;
+
+function TFormMain.TryFindDestSave(const ASave: TPS4SaveGame;
+  out ADestSave: TPS4SaveGame): Boolean;
+var
+  I: Integer;
+begin
+  Result := False;
+  for I := 0 to High(FDestViewSaves) do
+    if SameText(FDestViewSaves[I].TitleID, ASave.TitleID) and
+       SameText(FDestViewSaves[I].SaveName, ASave.SaveName) then
+    begin
+      ADestSave := FDestViewSaves[I];
+      Exit(True);
+    end;
+end;
+
+function TFormMain.IsNewLeftSave(AIndex: Integer): Boolean;
+var
+  DestSave: TPS4SaveGame;
+begin
+  Result := False;
+  if not FDestSavesLoaded then Exit;
+  if (AIndex < 0) or (AIndex > High(FViewSaves)) then Exit;
+
+  if not TryFindDestSave(FViewSaves[AIndex], DestSave) then
+    Exit(True);
+
+  Result := FViewSaves[AIndex].ModifiedAt > DestSave.ModifiedAt;
+end;
+
+procedure TFormMain.cbOperationModeChange(Sender: TObject);
+begin
+  case cbOperationMode.ItemIndex of
+    0:begin
+      Self.Constraints.MinWidth := 0;
+      Self.Constraints.MaxWidth := 0;
+      Self.Width := 770;
+      Self.Constraints.MinWidth := 770;
+      Self.Constraints.MaxWidth := 770;
+      Self.gbSaveSource.Height := 130;
+      Self.gbSaveDestiny.Height := 130;
+      Self.gbSaveDestiny.Left := 7;
+      Self.gbSaveDestiny.Top := 173;
+
+      Self.gbTrophiesSource.Height := 130;
+      Self.gbTrophiesDestiny.Height := 130;
+      Self.gbTrophiesDestiny.Left := 7;
+      Self.gbTrophiesDestiny.Top := 173;
+    end;
+    1:begin
+      Self.Constraints.MinWidth := 0;
+      Self.Constraints.MaxWidth := 0;
+      Self.Width := 1550;
+      Self.gbSaveSource.Height := 260;
+      Self.gbSaveDestiny.Height := 260;
+      Self.gbSaveDestiny.Left := 786;
+      Self.gbSaveDestiny.Top := 43;
+
+      Self.gbTrophiesSource.Height := 260;
+      Self.gbTrophiesDestiny.Height := 260;
+      Self.gbTrophiesDestiny.Left := 786;
+      Self.gbTrophiesDestiny.Top := 43;
+    end;
+  end;
+end;
+
+procedure TFormMain.clbSavesLeftDrawItem(Control: TWinControl; Index: Integer;
+  Rect: TRect; State: TOwnerDrawState);
+begin
+  { Pintura personalizada desativada; a lista usa o desenho padrão do VCL.
+    if odSelected in State then ...
+    else if IsNewLeftSave(Index) then ...
+    List.Canvas.FillRect(Rect);
+    DrawText(...);
+  }
+end;
+
+procedure TFormMain.btnLoadUsersClick(Sender: TObject);
+var
+  LeftIP, DestIP: string;
+  LoadedLeftUsers: TArray<TPS4SaveUser>;
+  LoadedDestUsers: TArray<TPS4SaveUser>;
+begin
+  LeftIP := Trim(edtIpLeft.Text);
+  DestIP := Trim(edtIpRight.Text);
+  if (LeftIP = '') or (DestIP = '') then
+  begin
+    ShowLocalizedMessage('Informe o IP de origem e o IP de destino.');
+    Exit;
+  end;
+
+  FLoadingUsers := True;
+  cmbUserLeft.Enabled := False;
+  cmbUserRight.Enabled := False;
+  UpdateSideEnabled(True, False);
+  UpdateSideEnabled(False, False);
+  cmbUserLeft.Items.Clear;
+  cmbUserRight.Items.Clear;
+  cmbUserLeft.ItemIndex := -1;
+  cmbUserRight.ItemIndex := -1;
+  SetLength(FLeftUsers, 0);
+  SetLength(FDestUsers, 0);
+  SetLength(FSaves, 0);
+  SetLength(FViewSaves, 0);
+  SetLength(FDestSaves, 0);
+  SetLength(FDestViewSaves, 0);
+  SetLength(FTrophiesLeft, 0);
+  SetLength(FTrophiesRight, 0);
+  FDestSavesLoaded := False;
+  FLeftUserActivated := False;
+  FDestUserActivated := False;
+  FLoadedLeftIP := '';
+  FLoadedLeftUserID := '';
+  clbSavesLeft.Items.Clear;
+  clbSavesRight.Items.Clear;
+  lvLeft.Items.BeginUpdate;
+  lvRight.Items.BeginUpdate;
+  try
+    lvLeft.Items.Clear;
+    lvRight.Items.Clear;
+  finally
+    lvRight.Items.EndUpdate;
+    lvLeft.Items.EndUpdate;
+  end;
+  lvLeft.Invalidate;
+  lvRight.Invalidate;
+
+  RunWorker(
+    procedure
+    begin
+      AddLog('Verificando PS4 Save Agent na origem...');
+      try
+        EnsurePS4SaveAgentCurrent(LeftIP, AddLog);
+      except
+        on E: Exception do
+          AddLog('Atualizacao do PS4 Save Agent na origem nao concluida: ' +
+            E.Message + '. Continuando com o Agent atual.');
+      end;
+      AddLog('Verificando PS4 Save Agent no destino...');
+      try
+        EnsurePS4SaveAgentCurrent(DestIP, AddLog);
+      except
+        on E: Exception do
+          AddLog('Atualizacao do PS4 Save Agent no destino nao concluida: ' +
+            E.Message + '. Continuando com o Agent atual.');
+      end;
+      AddLog('Carregando usuarios do PS4 de origem...');
+      try
+        LoadedLeftUsers := ListPS4Users(LeftIP, PS4_FTP_PORT);
+      except
+        on E: Exception do
+        begin
+          LoadedLeftUsers := nil;
+          AddLog('Falha ao conectar/carregar origem: ' + E.Message);
+        end;
+      end;
+
+      AddLog('Carregando usuarios do PS4 de destino...');
+      try
+        LoadedDestUsers := ListPS4Users(DestIP, PS4_FTP_PORT);
+      except
+        on E: Exception do
+        begin
+          LoadedDestUsers := nil;
+          AddLog('Falha ao conectar/carregar destino: ' + E.Message);
+        end;
+      end;
+    end,
+    procedure
+    var
+      User: TPS4SaveUser;
+    begin
+      SetLength(FLeftUsers, 0);
+      for User in LoadedLeftUsers do
+        AppendValidUser(FLeftUsers, User);
+
+      SetLength(FDestUsers, 0);
+      for User in LoadedDestUsers do
+        AppendValidUser(FDestUsers, User);
+
+      cmbUserLeft.Items.BeginUpdate;
+      try
+        cmbUserLeft.Items.Clear;
+        for User in FLeftUsers do
+          cmbUserLeft.Items.Add(Format('%s (%s)', [User.DisplayName, User.UserID]));
+        cmbUserLeft.ItemIndex := -1;
+      finally
+        cmbUserLeft.Items.EndUpdate;
+      end;
+
+      cmbUserRight.Items.BeginUpdate;
+      try
+        cmbUserRight.Items.Clear;
+        for User in FDestUsers do
+          cmbUserRight.Items.Add(Format('%s (%s)', [User.DisplayName, User.UserID]));
+        cmbUserRight.ItemIndex := -1;
+      finally
+        cmbUserRight.Items.EndUpdate;
+      end;
+
+      cmbUserLeft.Enabled := Length(FLeftUsers) > 0;
+      cmbUserRight.Enabled := Length(FDestUsers) > 0;
+      cmbSyncMode.Enabled := True;
+      UpdateUserDependentEnabled;
+      SetAvatarControlsEnabled(cmbUserRight.ItemIndex >= 0);
+
+      AddLog(Format('%d usuario(s) na origem, %d usuario(s) no destino.',
+        [Length(FLeftUsers), Length(FDestUsers)]));
+    end,
+    'Falha ao carregar usuarios: ',
+    procedure
+    begin
+      FLoadingUsers := False;
+    end);
+end;
+
+procedure TFormMain.LoadLeftSavesForSelectedUser;
+var
+  LeftIP, LeftUserID: string;
+  LoadedSaves: TArray<TPS4SaveGame>;
+begin
+  LeftIP := Trim(edtIpLeft.Text);
+  if LeftIP = '' then
+  begin
+    ShowLocalizedMessage('Informe o IP de origem.');
+    Exit;
+  end;
+  if cmbUserLeft.ItemIndex < 0 then
+  begin
+    ShowLocalizedMessage('Carregue e selecione o usuario de origem.');
+    Exit;
+  end;
+  LeftUserID := FLeftUsers[cmbUserLeft.ItemIndex].UserID;
+  if not IsValidUserID(LeftUserID) then
+  begin
+    ShowLocalizedMessage('Usuario de origem invalido: ' + LeftUserID);
+    Exit;
+  end;
+
+  SetLength(FSaves, 0);
+  SetLength(FViewSaves, 0);
+  FLoadedLeftIP := '';
+  FLoadedLeftUserID := '';
+  clbSavesLeft.Items.Clear;
+
+  RunWorker(
+    procedure
+    begin
+      AddLog('Carregando SAVES de ' + LeftIP + ' usuario ' + LeftUserID + '...');
+      LoadedSaves := ListPS4SaveGamesForUser(LeftIP, PS4_FTP_PORT, LeftUserID);
+    end,
+    procedure
+    begin
+      FSaves := LoadedSaves;
+      FLoadedLeftIP := LeftIP;
+      FLoadedLeftUserID := LeftUserID;
+      FillSaveList(clbSavesLeft, FSaves, LeftUserID, FViewSaves, False);
+      AddLog(Format('%d save(s) encontrado(s) para o usuario %s.', [Length(FViewSaves), LeftUserID]));
+      clbSavesLeft.Invalidate;
+      if cbOperationMode.ItemIndex = 0 then
+        ValidateDestUserAndLoadSaves;
+    end,
+    'Falha ao carregar SAVES de origem: ');
+end;
+
+procedure TFormMain.LoadDestSavesForSelectedUser;
+var
+  DestIP, DestUserID: string;
+  LoadedSaves: TArray<TPS4SaveGame>;
+begin
+  DestIP := Trim(edtIpRight.Text);
+  if DestIP = '' then
+  begin
+    ShowLocalizedMessage('Informe o IP de destino.');
+    Exit;
+  end;
+  if cmbUserRight.ItemIndex < 0 then
+  begin
+    ShowLocalizedMessage('Carregue e selecione o usuario de destino.');
+    Exit;
+  end;
+  DestUserID := FDestUsers[cmbUserRight.ItemIndex].UserID;
+  if not IsValidUserID(DestUserID) then
+  begin
+    ShowLocalizedMessage('Usuario de destino invalido: ' + DestUserID);
+    Exit;
+  end;
+
+  SetLength(FDestSaves, 0);
+  SetLength(FDestViewSaves, 0);
+  FDestSavesLoaded := False;
+  clbSavesRight.Items.Clear;
+
+  RunWorker(
+    procedure
+    begin
+      AddLog('Carregando SAVES de destino ' + DestIP + ' usuario ' + DestUserID + '...');
+      LoadedSaves := ListPS4SaveGamesForUser(DestIP, PS4_FTP_PORT, DestUserID);
+    end,
+    procedure
+    begin
+      FDestSaves := LoadedSaves;
+      FillSaveList(clbSavesRight, FDestSaves, DestUserID, FDestViewSaves, False);
+      FDestSavesLoaded := True;
+      clbSavesRight.Invalidate;
+      AddLog(Format('%d save(s) encontrado(s) no destino para o usuario %s.',
+        [Length(FDestViewSaves), DestUserID]));
+    end,
+    'Falha ao carregar SAVES de destino: ');
+end;
+
+function TFormMain.ActivationHelpText(const AUserID: string): string;
+begin
+  Result :=
+    'O usuario ' + AUserID + ' nao tem Account ID ativado pelo Apollo.' + sLineBreak +
+    sLineBreak +
+    'Antes de sincronizar saves, faca assim:' + sLineBreak +
+    '1. No PS4, entre nesse usuario.' + sLineBreak +
+    '2. Abra o Apollo Save Tool nesse mesmo usuario.' + sLineBreak +
+    '3. Va na opcao de ativacao/offline account activation.' + sLineBreak +
+    '4. Ative com um Account ID unico, por exemplo 2222222222222222.' + sLineBreak +
+    '5. Feche o Apollo e reinicie o PS4, ou pelo menos recarregue o GoldHEN.' + sLineBreak +
+    '6. Abra esta tela novamente e selecione o usuario de novo.' + sLineBreak +
+    sLineBreak +
+    'A sincronizacao foi bloqueada para evitar save corrompido.';
+end;
+
+procedure TFormMain.ValidateLeftUserAndLoadSaves;
+var
+  LeftIP, LeftUserID, AccountID: string;
+begin
+  if cmbUserLeft.ItemIndex < 0 then
+  begin
+    ShowLocalizedMessage('Selecione o usuario do lado esquerdo.');
+    Exit;
+  end;
+  if cmbUserLeft.ItemIndex < 0 then Exit;
+  LeftIP := Trim(edtIpLeft.Text);
+  LeftUserID := FLeftUsers[cmbUserLeft.ItemIndex].UserID;
+  FLeftUserActivated := False;
+
+  if not IsAutomaticSyncMode then
+  begin
+    FLeftUserActivated := True;
+    LoadLeftSavesForSelectedUser;
+    Exit;
+  end;
+
+  RunWorker(
+    procedure
+    begin
+      AddLog('Validando Account ID do usuario origem ' + LeftUserID + '...');
+      AccountID := GetPS4SaveAgentAccountID(LeftIP, LeftUserID, AddLog);
+    end,
+    procedure
+    begin
+      if SameText(AccountID, '0000000000000000') then
+      begin
+        AddLog('Usuario origem sem Account ID ativado: ' + LeftUserID);
+        ShowLocalizedMessage(ActivationHelpText(LeftUserID));
+        Exit;
+      end;
+
+      FLeftUserActivated := True;
+      AddLog('Usuario origem ativado com Account ID ' + AccountID + '.');
+      LoadLeftSavesForSelectedUser;
+    end,
+    'Falha ao validar usuario origem: ');
+end;
+
+procedure TFormMain.ValidateDestUserAndLoadSaves;
+var
+  DestIP, DestUserID, AccountID: string;
+begin
+  if cmbUserRight.ItemIndex < 0 then
+  begin
+    ShowLocalizedMessage('Selecione o usuario do lado direito.');
+    Exit;
+  end;
+
+  if cmbUserRight.ItemIndex < 0 then Exit;
+  DestIP := Trim(edtIpRight.Text);
+  DestUserID := FDestUsers[cmbUserRight.ItemIndex].UserID;
+  FDestUserActivated := False;
+
+  if not IsAutomaticSyncMode then
+  begin
+    FDestUserActivated := True;
+    LoadDestSavesForSelectedUser;
+    Exit;
+  end;
+
+  RunWorker(
+    procedure
+    begin
+      AddLog('Validando Account ID do usuario destino ' + DestUserID + '...');
+      AccountID := GetPS4SaveAgentAccountID(DestIP, DestUserID, AddLog);
+    end,
+    procedure
+    begin
+      if SameText(AccountID, '0000000000000000') then
+      begin
+        AddLog('Usuario destino sem Account ID ativado: ' + DestUserID);
+        ShowLocalizedMessage(ActivationHelpText(DestUserID));
+        Exit;
+      end;
+
+      FDestUserActivated := True;
+      AddLog('Usuario destino ativado com Account ID ' + AccountID + '.');
+      LoadDestSavesForSelectedUser;
+    end,
+    'Falha ao validar usuario destino: ');
+end;
+
+procedure TFormMain.cmbUserLeftChange(Sender: TObject);
+begin
+  UpdateSideEnabled(True, cmbUserLeft.ItemIndex >= 0);
+  if FLoadingUsers then Exit;
+  if cmbUserLeft.ItemIndex < 0 then Exit;
+end;
+
+procedure TFormMain.cmbUserRightChange(Sender: TObject);
+begin
+  UpdateSideEnabled(False, cmbUserRight.ItemIndex >= 0);
+  SetAvatarControlsEnabled(cmbUserRight.ItemIndex >= 0);
+  if FLoadingUsers then Exit;
+  if cmbUserRight.ItemIndex < 0 then Exit;
+end;
+
+procedure TFormMain.btnLeftSelectAllClick(Sender: TObject);
+var
+  I: Integer;
+begin
+  for I := 0 to clbSavesLeft.Items.Count - 1 do
+    clbSavesLeft.Checked[I] := True;
+end;
+
+procedure TFormMain.btnLeftSelectNoneClick(Sender: TObject);
+var
+  I: Integer;
+begin
+  for I := 0 to clbSavesLeft.Items.Count - 1 do
+    clbSavesLeft.Checked[I] := False;
+  for I := 0 to clbSavesRight.Items.Count - 1 do
+    clbSavesRight.Checked[I] := False;
+end;
+
+procedure TFormMain.UncheckAllSaves;
+var
+  I: Integer;
+begin
+  for I := 0 to clbSavesLeft.Items.Count - 1 do
+    clbSavesLeft.Checked[I] := False;
+  for I := 0 to clbSavesRight.Items.Count - 1 do
+    clbSavesRight.Checked[I] := False;
+end;
+
+procedure TFormMain.btnSavesDeleteClick(Sender: TObject);
+var
+  LeftIP, DestIP: string;
+  LeftSelected, DestSelected: TArray<TPS4SaveGame>;
+  I: Integer;
+begin
+  LeftIP := Trim(edtIpLeft.Text);
+  DestIP := Trim(edtIpRight.Text);
+
+  SetLength(LeftSelected, 0);
+  for I := 0 to clbSavesLeft.Items.Count - 1 do
+    if clbSavesLeft.Checked[I] then
+    begin
+      SetLength(LeftSelected, Length(LeftSelected) + 1);
+      LeftSelected[High(LeftSelected)] := FViewSaves[I];
+    end;
+
+  SetLength(DestSelected, 0);
+  for I := 0 to clbSavesRight.Items.Count - 1 do
+    if clbSavesRight.Checked[I] then
+    begin
+      SetLength(DestSelected, Length(DestSelected) + 1);
+      DestSelected[High(DestSelected)] := FDestViewSaves[I];
+    end;
+
+  if (Length(LeftSelected) = 0) and (Length(DestSelected) = 0) then
+  begin
+    ShowLocalizedMessage('Selecione ao menos um save para deletar.');
+    Exit;
+  end;
+
+  if MessageDlg('Deletar ' + IntToStr(Length(LeftSelected) + Length(DestSelected)) +
+     ' save(s) selecionado(s)?', mtConfirmation, [mbYes, mbNo], 0) <> mrYes then
+    Exit;
+
+  RunWorker(
+    procedure
+    var
+      Save: TPS4SaveGame;
+    begin
+      for Save in LeftSelected do
+        DeletePS4SaveWithAgent(LeftIP, Save, AddLog);
+      for Save in DestSelected do
+        DeletePS4SaveWithAgent(DestIP, Save, AddLog);
+      if Length(LeftSelected) > 0 then
+        CleanupPS4StaleSavesWithAgent(LeftIP, LeftSelected[0].UserID, AddLog);
+      if Length(DestSelected) > 0 then
+        CleanupPS4StaleSavesWithAgent(DestIP, DestSelected[0].UserID, AddLog);
+    end,
+    procedure
+    begin
+      AddLog('Delete concluido.');
+      UncheckAllSaves;
+      if (Length(LeftSelected) > 0) and (cmbUserLeft.ItemIndex >= 0) then
+        LoadLeftSavesForSelectedUser;
+      if (Length(DestSelected) > 0) and (cmbUserRight.ItemIndex >= 0) then
+        LoadDestSavesForSelectedUser;
+    end,
+    'Falha ao deletar saves: ');
+end;
+
+procedure TFormMain.btnStartExportClick(Sender: TObject);
+var
+  Host, UserID: string;
+  Selected: TArray<TPS4SaveGame>;
+  BackupRoot: string;
+  IsLeft: Boolean;
+  LeftIndex, DestIndex: Integer;
+begin
+  IsLeft := Sender = btnExportLeft;
+  if IsLeft then
+  begin
+    Host := Trim(edtIpLeft.Text);
+    if cmbUserLeft.ItemIndex < 0 then
+    begin
+      ShowLocalizedMessage('Selecione o usuario de origem.');
+      Exit;
+    end;
+    UserID := FLeftUsers[cmbUserLeft.ItemIndex].UserID;
+  end
+  else
+  begin
+    Host := Trim(edtIpRight.Text);
+    if cmbUserRight.ItemIndex < 0 then
+    begin
+      ShowLocalizedMessage('Selecione o usuario de destino.');
+      Exit;
+    end;
+    UserID := FDestUsers[cmbUserRight.ItemIndex].UserID;
+  end;
+  if Host = '' then
+  begin
+    ShowLocalizedMessage('Informe o IP do PS4.');
+    Exit;
+  end;
+
+  SetLength(Selected, 0);
+  if IsLeft then
+    for LeftIndex := 0 to clbSavesLeft.Items.Count - 1 do
+      if clbSavesLeft.Checked[LeftIndex] and
+         (LeftIndex <= High(FViewSaves)) then
+      begin
+        SetLength(Selected, Length(Selected) + 1);
+        Selected[High(Selected)] := FViewSaves[LeftIndex];
+        Selected[High(Selected)].UserID := UserID;
+      end
+  else
+    for DestIndex := 0 to clbSavesRight.Items.Count - 1 do
+      if clbSavesRight.Checked[DestIndex] and
+         (DestIndex <= High(FDestViewSaves)) then
+      begin
+        SetLength(Selected, Length(Selected) + 1);
+        Selected[High(Selected)] := FDestViewSaves[DestIndex];
+        Selected[High(Selected)].UserID := UserID;
+      end;
+
+  { Clicar na linha tambem conta como selecionar para exportacao. }
+  if Length(Selected) = 0 then
+  begin
+    if IsLeft and (clbSavesLeft.ItemIndex >= 0) and
+       (clbSavesLeft.ItemIndex <= High(FViewSaves)) then
+    begin
+      SetLength(Selected, 1);
+      Selected[0] := FViewSaves[clbSavesLeft.ItemIndex];
+      Selected[0].UserID := UserID;
+    end
+    else if (not IsLeft) and (clbSavesRight.ItemIndex >= 0) and
+            (clbSavesRight.ItemIndex <= High(FDestViewSaves)) then
+    begin
+      SetLength(Selected, 1);
+      Selected[0] := FDestViewSaves[clbSavesRight.ItemIndex];
+      Selected[0].UserID := UserID;
+    end;
+  end;
+
+  if Length(Selected) = 0 then
+  begin
+    ShowLocalizedMessage(TranslateSyncText('NeedGame', FCurrentLanguage));
+    Exit;
+  end;
+
+  BackupRoot := TPath.Combine(ExtractFileDir(ParamStr(0)), 'saves');
+  RunWorker(
+    procedure
+    begin
+      ResetSyncProgress;
+      { Export only: stop after the decrypted save has been written to the PC. }
+      ExportPS4SavesDecrypted(Host, PS4_FTP_PORT, Selected, BackupRoot,
+        AddLog, UpdateSyncProgress);
+    end,
+    procedure
+    begin
+      UncheckAllSaves;
+      AddLog('Exportacao concluida: ' + BackupRoot);
+      ShowLocalizedMessage('Save salvo no PC em: ' + BackupRoot);
+    end,
+    TranslateSyncText('SyncError', FCurrentLanguage));
+end;
+
+procedure TFormMain.btnStartImportClick(Sender: TObject);
+var
+  Host, UserID, SaveFolder: string;
+  SelectedFolder, TempFolder, GameFolder, SaveDir, TempGameFolder: string;
+  SaveFolders: TStringList;
+  SelectForm: TForm;
+  SaveList: TCheckListBox;
+  SelectAllButton, SendButton, CancelButton: TButton;
+  SaveFiles: TArray<string>;
+  I: Integer;
+  IsLeft: Boolean;
+begin
+  IsLeft := Sender = btnImportLeft;
+  if IsLeft then
+  begin
+    Host := Trim(edtIpLeft.Text);
+    if cmbUserLeft.ItemIndex < 0 then
+    begin
+      ShowLocalizedMessage('Selecione o usuario de origem.');
+      Exit;
+    end;
+    UserID := FLeftUsers[cmbUserLeft.ItemIndex].UserID;
+  end
+  else
+  begin
+    Host := Trim(edtIpRight.Text);
+    if cmbUserRight.ItemIndex < 0 then
+    begin
+      ShowLocalizedMessage('Selecione o usuario de destino.');
+      Exit;
+    end;
+    UserID := FDestUsers[cmbUserRight.ItemIndex].UserID;
+  end;
+
+  if Host = '' then
+  begin
+    ShowLocalizedMessage('Informe o IP do PS4.');
+    Exit;
+  end;
+
+  SaveFolder := TPath.Combine(ExtractFileDir(ParamStr(0)), 'saves');
+  if not TDirectory.Exists(SaveFolder) then
+  begin
+    ShowLocalizedMessage('A pasta Saves nao foi encontrada ao lado do executavel.');
+    Exit;
+  end;
+
+  SaveFolders := TStringList.Create;
+  try
+    for GameFolder in TDirectory.GetDirectories(SaveFolder) do
+      for SaveDir in TDirectory.GetDirectories(GameFolder) do
+      begin
+        SaveFiles := TDirectory.GetFiles(SaveDir, '*.ps4sav');
+        if Length(SaveFiles) > 0 then
+          SaveFolders.Add(SaveDir);
+      end;
+
+    if SaveFolders.Count = 0 then
+    begin
+      ShowLocalizedMessage('Nenhum save encontrado na pasta Saves.');
+      Exit;
+    end;
+
+    SelectForm := TForm.CreateNew(Self);
+    try
+      SelectForm.Caption := TranslateText('Selecionar saves para enviar', FCurrentLanguage);
+      SelectForm.Position := poScreenCenter;
+      SelectForm.Width := 620;
+      SelectForm.Height := 460;
+      SelectForm.BorderStyle := bsDialog;
+
+      SaveList := TCheckListBox.Create(SelectForm);
+      SaveList.Parent := SelectForm;
+      SaveList.Align := alClient;
+      SaveList.BorderStyle := bsSingle;
+      ImportSelectionList := SaveList;
+      for I := 0 to SaveFolders.Count - 1 do
+        SaveList.Items.Add(ExtractFileName(ExtractFileDir(SaveFolders[I])) + '\' +
+          ExtractFileName(SaveFolders[I]));
+
+      SelectAllButton := TButton.Create(SelectForm);
+      SelectAllButton.Parent := SelectForm;
+      SelectAllButton.Align := alBottom;
+      SelectAllButton.Caption := TranslateText('Selecionar todos', FCurrentLanguage);
+      SelectAllButton.Height := 32;
+      SelectAllButton.ModalResult := mrNone;
+      SelectAllButton.OnClick := SelectAllImportClick;
+
+      SendButton := TButton.Create(SelectForm);
+      SendButton.Parent := SelectForm;
+      SendButton.Align := alBottom;
+      SendButton.Caption := TranslateText('Enviar selecionados', FCurrentLanguage);
+      SendButton.Height := 36;
+      SendButton.ModalResult := mrOk;
+
+      CancelButton := TButton.Create(SelectForm);
+      CancelButton.Parent := SelectForm;
+      CancelButton.Align := alBottom;
+      CancelButton.Caption := TranslateText('Cancelar', FCurrentLanguage);
+      CancelButton.Height := 32;
+      CancelButton.ModalResult := mrCancel;
+
+      if SelectForm.ShowModal <> mrOk then
+        Exit;
+
+      TempFolder := TPath.Combine(TPath.GetTempPath,
+        'PS4Tools_import_' + IntToStr(GetTickCount));
+      System.SysUtils.ForceDirectories(TempFolder);
+      for I := 0 to SaveFolders.Count - 1 do
+        if SaveList.Checked[I] then
+        begin
+          GameFolder := ExtractFileDir(SaveFolders[I]);
+          TempGameFolder := TPath.Combine(TempFolder, ExtractFileName(GameFolder));
+          System.SysUtils.ForceDirectories(TempGameFolder);
+          SelectedFolder := TPath.Combine(TempGameFolder,
+            ExtractFileName(SaveFolders[I]));
+          TDirectory.Copy(SaveFolders[I], SelectedFolder, True);
+        end;
+    finally
+      SelectForm.Free;
+    end;
+  finally
+    SaveFolders.Free;
+  end;
+
+  if (TempFolder = '') or (Length(TDirectory.GetDirectories(TempFolder)) = 0) then
+  begin
+    if TempFolder <> '' then
+      TDirectory.Delete(TempFolder, True);
+    ShowLocalizedMessage('Selecione pelo menos um save.');
+    Exit;
+  end;
+
+  RunWorker(
+    procedure
+    begin
+      ImportPS4SaveBackup(Host, UserID, TempFolder,
+        IsAutomaticSyncMode, AddLog);
+      { Aguarda o Orbis/FTP concluir a persistencia fora da thread da UI. }
+      Sleep(3000);
+      TDirectory.Delete(TempFolder, True);
+    end,
+    procedure
+    begin
+      AddLog('Importacao concluida para ' + Host + '.');
+      if IsLeft then
+        LoadLeftSavesForSelectedUser
+      else
+        LoadDestSavesForSelectedUser;
+      ShowLocalizedMessage('Saves enviados para o PS4: ' + Host);
+    end,
+    'Falha ao enviar os saves para o PS4: ');
+end;
+
+procedure TFormMain.SelectAllImportClick(Sender: TObject);
+var
+  K: Integer;
+begin
+  if not Assigned(ImportSelectionList) then
+    Exit;
+  for K := 0 to ImportSelectionList.Count - 1 do
+    ImportSelectionList.Checked[K] := True;
+end;
+
+function TFormMain.SelectedTrophies(AList: TListView;
+  const ATrophies: TArray<TPS4TrophyTitle>): TArray<TPS4TrophyTitle>;
+var
+  I, Count, Index: Integer;
+begin
+  SetLength(Result, 0);
+  Count := 0;
+  for I := 0 to AList.Items.Count - 1 do
+    if AList.Items[I].Checked then
+    begin
+      Index := NativeInt(AList.Items[I].Data);
+      if (Index >= 0) and (Index < Length(ATrophies)) then
+      begin
+        SetLength(Result, Count + 1);
+        Result[Count] := ATrophies[Index];
+        Inc(Count);
+      end;
+    end;
+end;
+
+function TFormMain.CountExistingTitles(const AItems,
+  ADestItems: TArray<TPS4TrophyTitle>): Integer;
+var
+  I, J: Integer;
+begin
+  Result := 0;
+  for I := 0 to Length(AItems) - 1 do
+  begin
+    for J := 0 to Length(ADestItems) - 1 do
+      if SameText(AItems[I].TrophyTitleID, ADestItems[J].TrophyTitleID) then
+      begin
+        Inc(Result);
+        Break;
+      end;
+  end;
+end;
+
+procedure TFormMain.CopySelected(AFromLeft: Boolean);
+var
+  LeftIP, DestIP, LeftUserID, DestUserID: string;
+  Items, DestItems, PendingItems: TArray<TPS4TrophyTitle>;
+  ExistingCount, Choice, I, J: Integer;
+  ExistingMode: TPS4TrophyExistingMode;
+  SkippedNames, SentNames: TStringList;
+  FoundDestination, EqualDestination: Boolean;
+  SelectForm: TForm;
+  TrophyList: TCheckListBox;
+  SelectAllButton, SendButton, CancelButton: TButton;
+  SourceItems: TArray<TPS4TrophyTitle>;
+begin
+  if AFromLeft then
+  begin
+    LeftIP := Trim(edtIpLeft.Text);
+    DestIP := Trim(edtIpRight.Text);
+    SourceItems := FTrophiesLeft;
+    DestItems := FTrophiesRight;
+    if cmbUserLeft.ItemIndex < 0 then Exit;
+    if cmbUserRight.ItemIndex < 0 then Exit;
+    LeftUserID := FLeftUsers[cmbUserLeft.ItemIndex].UserID;
+    DestUserID := FDestUsers[cmbUserRight.ItemIndex].UserID;
+  end
+  else
+  begin
+    LeftIP := Trim(edtIpRight.Text);
+    DestIP := Trim(edtIpLeft.Text);
+    SourceItems := FTrophiesRight;
+    DestItems := FTrophiesLeft;
+    if cmbUserRight.ItemIndex < 0 then Exit;
+    if cmbUserLeft.ItemIndex < 0 then Exit;
+    LeftUserID := FDestUsers[cmbUserRight.ItemIndex].UserID;
+    DestUserID := FLeftUsers[cmbUserLeft.ItemIndex].UserID;
+  end;
+
+  if (LeftIP = '') or (DestIP = '') then
+  begin
+    MessageDlg(TranslateText('Informe o IP dos dois PS4.', FCurrentLanguage), mtWarning, [mbOK], 0);
+    Exit;
+  end;
+
+  SetLength(Items, 0);
+  if AFromLeft then
+    Items := SelectedTrophies(lvLeft, FTrophiesLeft)
+  else
+  begin
+    { Ao importar do outro fluxo, a seleção continua sendo feita na janela dedicada. }
+    SelectForm := TForm.CreateNew(Self);
+    try
+      SelectForm.Caption := TranslateText('Selecionar trofeus para enviar', FCurrentLanguage);
+    SelectForm.Position := poScreenCenter;
+    SelectForm.Width := 620;
+    SelectForm.Height := 460;
+    SelectForm.BorderStyle := bsDialog;
+
+    TrophyList := TCheckListBox.Create(SelectForm);
+    TrophyList.Parent := SelectForm;
+    TrophyList.Align := alClient;
+    TrophyList.BorderStyle := bsSingle;
+    ImportSelectionList := TrophyList;
+    for I := 0 to Length(SourceItems) - 1 do
+      TrophyList.Items.Add(SourceItems[I].Title + ' [' +
+        SourceItems[I].TrophyTitleID + ']');
+
+    SelectAllButton := TButton.Create(SelectForm);
+    SelectAllButton.Parent := SelectForm;
+    SelectAllButton.Align := alBottom;
+    SelectAllButton.Caption := TranslateText('Selecionar todos', FCurrentLanguage);
+    SelectAllButton.Height := 32;
+    SelectAllButton.OnClick := SelectAllImportClick;
+
+    SendButton := TButton.Create(SelectForm);
+    SendButton.Parent := SelectForm;
+    SendButton.Align := alBottom;
+    SendButton.Caption := TranslateText('Enviar selecionados', FCurrentLanguage);
+    SendButton.Height := 36;
+    SendButton.ModalResult := mrOk;
+
+    CancelButton := TButton.Create(SelectForm);
+    CancelButton.Parent := SelectForm;
+    CancelButton.Align := alBottom;
+    CancelButton.Caption := TranslateText('Cancelar', FCurrentLanguage);
+    CancelButton.Height := 32;
+    CancelButton.ModalResult := mrCancel;
+
+      if SelectForm.ShowModal <> mrOk then
+        Exit;
+
+      for I := 0 to TrophyList.Count - 1 do
+        if TrophyList.Checked[I] then
+        begin
+          SetLength(Items, Length(Items) + 1);
+          Items[High(Items)] := SourceItems[I];
+        end;
+    finally
+      ImportSelectionList := nil;
+      SelectForm.Free;
+    end;
+  end;
+
+  if Length(Items) = 0 then
+  begin
+    MessageDlg(TranslateText('Selecione pelo menos um jogo na lista de origem.', FCurrentLanguage), mtWarning, [mbOK], 0);
+    Exit;
+  end;
+
+  try
+    SkippedNames := TStringList.Create;
+    SentNames := TStringList.Create;
+    try
+      SetLength(PendingItems, 0);
+      for I := 0 to Length(Items) - 1 do
+      begin
+        FoundDestination := False;
+        EqualDestination := False;
+        for J := 0 to Length(DestItems) - 1 do
+          if SameText(Items[I].TrophyTitleID, DestItems[J].TrophyTitleID) then
+          begin
+            FoundDestination := True;
+            if (Items[I].TrophyNum = DestItems[J].TrophyNum) and
+               (Items[I].UnlockedNum = DestItems[J].UnlockedNum) then
+            begin
+              SkippedNames.Add(Items[I].Title);
+              EqualDestination := True;
+            end;
+            Break;
+          end;
+
+        if not FoundDestination or not EqualDestination then
+        begin
+          SetLength(PendingItems, Length(PendingItems) + 1);
+          PendingItems[High(PendingItems)] := Items[I];
+        end;
+      end;
+
+      if Length(PendingItems) = 0 then
+      begin
+        MessageDlg(TranslateText('Todos os trofeus selecionados ja existem no destino e foram ignorados:', FCurrentLanguage) +
+          sLineBreak + SkippedNames.Text, mtInformation, [mbOK], 0);
+        Exit;
+      end;
+
+      ExistingMode := temMerge;
+      ExistingCount := CountExistingTitles(PendingItems, DestItems);
+      if ExistingCount > 0 then
+      begin
+        Choice := MessageDlg(TranslateText(Format('%d jogo(s) com trofeus diferentes ja existem no PS4 destino.' +
+          sLineBreak + sLineBreak + 'Sim = MERGE.' + sLineBreak +
+          'Nao = substituir.' + sLineBreak + 'Cancelar = nao copiar.', [ExistingCount]), FCurrentLanguage),
+          mtConfirmation, [mbYes, mbNo, mbCancel], 0);
+        if Choice = mrCancel then
+          Exit;
+        if Choice = mrNo then
+          ExistingMode := temReplace;
+      end;
+
+      for I := 0 to Length(PendingItems) - 1 do
+        SentNames.Add(PendingItems[I].Title);
+
+      SetBusy(True);
+      try
+        SyncPS4TrophiesForUsers(LeftIP, DestIP, PS4_FTP_PORT,
+          LeftUserID, DestUserID, PendingItems, ExistingMode, AddLog);
+        AddLog('Sincronizacao concluida. Recarregando a lista de trofeus do destino...');
+        LoadTrophySide(not AFromLeft);
+        MessageDlg(TranslateText('Trofeus ignorados (ja iguais):', FCurrentLanguage) + sLineBreak + SkippedNames.Text +
+          sLineBreak + 'Trofeus enviados com sucesso:' + sLineBreak + SentNames.Text +
+          sLineBreak + 'Reinicie totalmente o PS4 de destino antes de abrir Trofeus.',
+          mtInformation, [mbOK], 0);
+      finally
+        SetBusy(False);
+      end;
+    finally
+      SentNames.Free;
+      SkippedNames.Free;
+    end;
+  except
+    on E: Exception do
+      MessageDlg(TranslateText('Erro ao sincronizar trofeus:', FCurrentLanguage) + ' ' + E.Message,
+        mtError, [mbOK], 0);
+  end;
+end;
+
+procedure TFormMain.btnCopyRightClick(Sender: TObject);
+begin
+  CopySelected(True);
+end;
+
+procedure TFormMain.btnCopyLeftClick(Sender: TObject);
+begin
+  CopySelected(False);
+end;
+
+procedure TFormMain.DeleteTrophySide(AIsLeft: Boolean);
+var
+  Host, UserID, DestHost, DestUserID: string;
+  Items, DestItems: TArray<TPS4TrophyTitle>;
+begin
+  if AIsLeft then
+  begin
+    Host := Trim(edtIpLeft.Text);
+    Items := SelectedTrophies(lvLeft, FTrophiesLeft);
+    if cmbUserLeft.ItemIndex >= 0 then
+      UserID := FLeftUsers[cmbUserLeft.ItemIndex].UserID;
+  end
+  else
+  begin
+    Host := Trim(edtIpRight.Text);
+    Items := SelectedTrophies(lvRight, FTrophiesRight);
+    if cmbUserRight.ItemIndex >= 0 then
+      UserID := FDestUsers[cmbUserRight.ItemIndex].UserID;
+  end;
+  if AIsLeft and (cbOperationMode.ItemIndex = 0) then
+  begin
+    DestHost := Trim(edtIpRight.Text);
+    DestItems := SelectedTrophies(lvRight, FTrophiesRight);
+    if cmbUserRight.ItemIndex >= 0 then
+      DestUserID := FDestUsers[cmbUserRight.ItemIndex].UserID;
+  end;
+  if (Host = '') or ((Length(Items) = 0) and (Length(DestItems) = 0)) then
+  begin
+    MessageDlg(TranslateText('Informe o IP e marque pelo menos um jogo de trofeus.', FCurrentLanguage), mtWarning, [mbOK], 0);
+    Exit;
+  end;
+  SetBusy(True);
+  try
+    if Length(Items) > 0 then
+      DeletePS4TrophiesForUser(Host, PS4_FTP_PORT, UserID, Items, AddLog);
+    if Length(DestItems) > 0 then
+      DeletePS4TrophiesForUser(DestHost, PS4_FTP_PORT, DestUserID, DestItems, AddLog);
+    SetBusy(False);
+    if AIsLeft and (cbOperationMode.ItemIndex = 0) then
+      LoadTrophySide(True)
+    else
+      LoadTrophySide(AIsLeft);
+  except
+    on E: Exception do
+      MessageDlg(TranslateText('Erro ao excluir trofeus:', FCurrentLanguage) + ' ' + E.Message, mtError, [mbOK], 0);
+  end;
+  SetBusy(False);
+end;
+
+procedure TFormMain.SortTrophySide(AIsLeft: Boolean);
+var
+  Host, UserID: string;
+begin
+  if AIsLeft then
+  begin
+    Host := Trim(edtIpLeft.Text);
+    if cmbUserLeft.ItemIndex >= 0 then
+      UserID := FLeftUsers[cmbUserLeft.ItemIndex].UserID;
+  end
+  else
+  begin
+    Host := Trim(edtIpRight.Text);
+    if cmbUserRight.ItemIndex >= 0 then
+      UserID := FDestUsers[cmbUserRight.ItemIndex].UserID;
+  end;
+  if Host = '' then Exit;
+  SetBusy(True);
+  try
+    SortPS4TrophiesAlphabetically(Host, PS4_FTP_PORT, UserID, AddLog);
+    SetBusy(False);
+    LoadTrophySide(AIsLeft);
+  except
+    on E: Exception do
+      MessageDlg(TranslateText('Erro ao ordenar trofeus:', FCurrentLanguage) + ' ' + E.Message, mtError, [mbOK], 0);
+  end;
+  SetBusy(False);
+end;
+
+procedure TFormMain.btnTrophiesDeleteLeftClick(Sender: TObject);
+begin
+  DeleteTrophySide(True);
+end;
+
+procedure TFormMain.btnTrophiesDeleteRightClick(Sender: TObject);
+begin
+  DeleteTrophySide(False);
+end;
+
+procedure TFormMain.btnSortLeftClick(Sender: TObject);
+begin
+  SortTrophySide(True);
+end;
+
+procedure TFormMain.btnSortRightClick(Sender: TObject);
+begin
+  SortTrophySide(False);
+end;
+
+procedure TFormMain.btnLeftAllClick(Sender: TObject);
+var
+  I: Integer;
+begin
+  for I := 0 to lvLeft.Items.Count - 1 do
+    lvLeft.Items[I].Checked := True;
+end;
+
+procedure TFormMain.btnLeftNoneClick(Sender: TObject);
+var
+  I: Integer;
+begin
+  for I := 0 to lvLeft.Items.Count - 1 do
+    lvLeft.Items[I].Checked := False;
+end;
+
+procedure TFormMain.btnRightAllClick(Sender: TObject);
+var
+  I: Integer;
+begin
+  for I := 0 to lvRight.Items.Count - 1 do
+    lvRight.Items[I].Checked := True;
+end;
+
+procedure TFormMain.btnRightNoneClick(Sender: TObject);
+var
+  I: Integer;
+begin
+  for I := 0 to lvRight.Items.Count - 1 do
+    lvRight.Items[I].Checked := False;
+end;
+
+procedure TFormMain.LoadTrophySide(AIsLeft: Boolean);
+var
+  Host, UserID, SideName: string;
+  TrophyTitles: TArray<TPS4TrophyTitle>;
+  TargetList: TListView;
+begin
+  if AIsLeft then
+  begin
+    Host := Trim(edtIpLeft.Text);
+    if cmbUserLeft.ItemIndex < 0 then
+    begin
+      ShowLocalizedMessage('Selecione o usuario do lado esquerdo.');
+      Exit;
+    end;
+    UserID := FLeftUsers[cmbUserLeft.ItemIndex].UserID;
+    TargetList := lvLeft;
+    SideName := 'esquerdo';
+  end
+  else
+  begin
+    Host := Trim(edtIpRight.Text);
+    if cmbUserRight.ItemIndex < 0 then
+    begin
+      ShowLocalizedMessage('Selecione o usuario do lado direito.');
+      Exit;
+    end;
+    UserID := FDestUsers[cmbUserRight.ItemIndex].UserID;
+    TargetList := lvRight;
+    SideName := 'direito';
+  end;
+
+  if Host = '' then
+  begin
+    ShowLocalizedMessage('Informe o IP do lado escolhido.');
+    Exit;
+  end;
+
+  RunWorker(
+    procedure
+    begin
+      try
+        TrophyTitles := ListPS4TrophiesForUser(Host, PS4_FTP_PORT, UserID);
+      except
+        on E: Exception do
+        begin
+          TrophyTitles := nil;
+          AddLog('Usuario ' + UserID + ' sem trophy_local.db; lista de trofeus vazia.');
+        end;
+      end;
+      if AIsLeft then
+        FTrophiesLeft := TrophyTitles
+      else
+        FTrophiesRight := TrophyTitles;
+    end,
+    procedure
+    var
+      I: Integer;
+      Item: TListItem;
+    begin
+      TargetList.Items.BeginUpdate;
+      try
+        TargetList.Items.Clear;
+        for I := 0 to Length(TrophyTitles) - 1 do
+        begin
+          Item := TargetList.Items.Add;
+          Item.Caption := TrophyTitles[I].TrophyTitleID;
+          Item.SubItems.Add(TrophyTitles[I].Title);
+          Item.SubItems.Add(IntToStr(TrophyTitles[I].TrophyNum));
+          Item.SubItems.Add(IntToStr(TrophyTitles[I].UnlockedNum));
+          Item.Checked := False;
+          Item.Data := Pointer(I);
+        end;
+      finally
+        TargetList.Items.EndUpdate;
+      end;
+      AddLog(Format('%d trofeu(s) carregado(s) no lado %s para o usuario %s.',
+        [Length(TrophyTitles), SideName, UserID]));
+      if AIsLeft and (cbOperationMode.ItemIndex = 0) then
+        LoadTrophySide(False);
+    end,
+    'Falha ao carregar trofeus: ');
+end;
+
+procedure TFormMain.BackupTrophySide(AIsLeft: Boolean);
+var
+  Host, UserID, BaseDir, DestDir: string;
+begin
+  if AIsLeft then
+  begin
+    Host := Trim(edtIpLeft.Text);
+    if cmbUserLeft.ItemIndex < 0 then
+      Exit;
+    UserID := FLeftUsers[cmbUserLeft.ItemIndex].UserID;
+  end
+  else
+  begin
+    Host := Trim(edtIpRight.Text);
+    if cmbUserRight.ItemIndex < 0 then
+      Exit;
+    UserID := FDestUsers[cmbUserRight.ItemIndex].UserID;
+  end;
+
+  if (Host = '') or (UserID = '') then
+  begin
+    ShowLocalizedMessage('Informe o IP e selecione o usuario do lado escolhido.');
+    Exit;
+  end;
+
+  BaseDir := TPath.Combine(ExtractFileDir(ParamStr(0)), 'trophy');
+  System.SysUtils.ForceDirectories(BaseDir);
+  DestDir := TPath.Combine(BaseDir, UserID);
+
+  if MessageDlg('Fazer backup dos trofeus deste lado para:' + sLineBreak +
+    DestDir, mtConfirmation, [mbYes, mbNo], 0) <> mrYes then
+    Exit;
+
+  RunWorker(
+    procedure
+    begin
+      BackupPS4TrophyState(Host, PS4_FTP_PORT, UserID, DestDir, AddLog);
+    end,
+    procedure
+    begin
+      ShowLocalizedMessage('Backup de trofeus concluido em:' + sLineBreak + DestDir);
+    end,
+    'Erro ao fazer backup dos trofeus: ');
+end;
+
+procedure TFormMain.UpdateRestoreTrophyList(Sender: TObject);
+var
+  UserID: string;
+  Titles: TArray<TPS4TrophyTitle>;
+  I: Integer;
+begin
+  if (not Assigned(FRestoreTrophyList)) or (not Assigned(FRestoreBackupUsers)) then
+    Exit;
+  if (Sender is TListBox) and (TListBox(Sender).ItemIndex >= 0) then
+  begin
+    UserID := FRestoreBackupUsers[TListBox(Sender).ItemIndex];
+    Titles := ListPS4TrophiesFromBackup(
+      TPath.Combine(FRestoreBackupBaseDir, UserID), UserID);
+    FRestoreTrophyList.Items.BeginUpdate;
+    try
+      FRestoreTrophyList.Items.Clear;
+      for I := 0 to Length(Titles) - 1 do
+      begin
+        FRestoreTrophyList.Items.AddObject(
+          Titles[I].Title + ' [' + Titles[I].TrophyTitleID + ']',
+          TObject(NativeInt(I)));
+        FRestoreTrophyList.Checked[I] := False;
+      end;
+    finally
+      FRestoreTrophyList.Items.EndUpdate;
+    end;
+  end;
+end;
+
+procedure TFormMain.RestoreTrophySide(AIsLeft: Boolean);
+var
+  Host, UserID, BaseDir, BackupDir, BackupUserID: string;
+  UserDirs: TStringList;
+  RestoreForm: TForm;
+  UserList: TListBox;
+  TrophyList: TCheckListBox;
+  TrophyTitles, SelectedTitles: TArray<TPS4TrophyTitle>;
+  I, J: Integer;
+  Splitter: TSplitter;
+  SelectAllButton, SendButton, CancelButton: TButton;
+begin
+  if AIsLeft then
+  begin
+    Host := Trim(edtIpLeft.Text);
+    if cmbUserLeft.ItemIndex < 0 then
+      Exit;
+    UserID := FLeftUsers[cmbUserLeft.ItemIndex].UserID;
+  end
+  else
+  begin
+    Host := Trim(edtIpRight.Text);
+    if cmbUserRight.ItemIndex < 0 then
+      Exit;
+    UserID := FDestUsers[cmbUserRight.ItemIndex].UserID;
+  end;
+
+  BaseDir := TPath.Combine(ExtractFileDir(ParamStr(0)), 'trophy');
+  if not TDirectory.Exists(BaseDir) then
+  begin
+    ShowLocalizedMessage('A pasta trophy nao foi encontrada ao lado do executavel.');
+    Exit;
+  end;
+
+  UserDirs := TStringList.Create;
+  try
+    for BackupDir in TDirectory.GetDirectories(BaseDir) do
+      if TDirectory.Exists(TPath.Combine(BackupDir, 'user\home')) then
+        UserDirs.Add(ExtractFileName(BackupDir));
+    if UserDirs.Count = 0 then
+    begin
+      ShowLocalizedMessage('Nenhum backup de usuario encontrado na pasta trophy.');
+      Exit;
+    end;
+    RestoreForm := TForm.CreateNew(Self);
+    try
+      RestoreForm.Caption := TranslateText('Restaurar trofeus', FCurrentLanguage);
+      RestoreForm.Position := poScreenCenter;
+      RestoreForm.Width := 760;
+      RestoreForm.Height := 460;
+      RestoreForm.BorderStyle := bsDialog;
+      UserList := TListBox.Create(RestoreForm);
+      UserList.Parent := RestoreForm;
+      UserList.Align := alLeft;
+      UserList.Width := 220;
+      UserList.Items.Assign(UserDirs);
+      UserList.OnClick := UpdateRestoreTrophyList;
+      Splitter := TSplitter.Create(RestoreForm);
+      Splitter.Parent := RestoreForm;
+      Splitter.Align := alLeft;
+      TrophyList := TCheckListBox.Create(RestoreForm);
+      TrophyList.Parent := RestoreForm;
+      TrophyList.Align := alClient;
+      FRestoreBackupBaseDir := BaseDir;
+      FRestoreBackupUsers := UserDirs;
+      FRestoreTrophyList := TrophyList;
+      FRestoreTrophyList.Items.Clear;
+      UserList.ItemIndex := 0;
+      UpdateRestoreTrophyList(UserList);
+      ImportSelectionList := TrophyList;
+      SelectAllButton := TButton.Create(RestoreForm);
+      SelectAllButton.Parent := RestoreForm;
+      SelectAllButton.Align := alBottom;
+      SelectAllButton.Caption := TranslateText('Selecionar todos', FCurrentLanguage);
+      SelectAllButton.Height := 32;
+      SelectAllButton.OnClick := SelectAllImportClick;
+      SendButton := TButton.Create(RestoreForm);
+      SendButton.Parent := RestoreForm;
+      SendButton.Align := alBottom;
+      SendButton.Caption := TranslateText('Enviar selecionados', FCurrentLanguage);
+      SendButton.Height := 36;
+      SendButton.ModalResult := mrOk;
+      CancelButton := TButton.Create(RestoreForm);
+      CancelButton.Parent := RestoreForm;
+      CancelButton.Align := alBottom;
+      CancelButton.Caption := TranslateText('Cancelar', FCurrentLanguage);
+      CancelButton.Height := 32;
+      CancelButton.ModalResult := mrCancel;
+      if RestoreForm.ShowModal <> mrOk then Exit;
+      BackupUserID := UserDirs[UserList.ItemIndex];
+      BackupDir := TPath.Combine(BaseDir, BackupUserID);
+      TrophyTitles := ListPS4TrophiesFromBackup(BackupDir, BackupUserID);
+      SetLength(SelectedTitles, 0);
+      for I := 0 to TrophyList.Count - 1 do
+        if TrophyList.Checked[I] then
+        begin
+          J := NativeInt(TrophyList.Items.Objects[I]);
+          SetLength(SelectedTitles, Length(SelectedTitles) + 1);
+          SelectedTitles[High(SelectedTitles)] := TrophyTitles[J];
+        end;
+    finally
+      FRestoreTrophyList := nil;
+      FRestoreBackupUsers := nil;
+      ImportSelectionList := nil;
+      RestoreForm.Free;
+    end;
+  finally
+    UserDirs.Free;
+  end;
+  if Length(SelectedTitles) = 0 then
+  begin
+    ShowLocalizedMessage('Selecione pelo menos um trofeu.');
+    Exit;
+  end;
+
+  RunWorker(
+    procedure
+    begin
+      RestorePS4TrophyTitles(Host, PS4_FTP_PORT, UserID, BackupDir,
+        SelectedTitles, temMerge, AddLog, UpdateSyncProgress);
+    end,
+    procedure
+    begin
+      LoadTrophySide(AIsLeft);
+    ShowLocalizedMessage('Restauracao de trofeus concluida.');
+    end,
+    'Erro ao restaurar os trofeus: ');
+end;
+
+procedure TFormMain.btnBackupRightClick(Sender: TObject);
+begin
+  BackupTrophySide(False);
+end;
+
+procedure TFormMain.btnLoadTrophiesLeftClick(Sender: TObject);
+begin
+  LoadTrophySide(True);
+end;
+
+procedure TFormMain.btnLoadTrophiesRightClick(Sender: TObject);
+begin
+  LoadTrophySide(False);
+end;
+
+procedure TFormMain.btnRestoreRightClick(Sender: TObject);
+begin
+  RestoreTrophySide(False);
+end;
+
+procedure TFormMain.btnBackupLeftClick(Sender: TObject);
+begin
+  BackupTrophySide(True);
+end;
+
+procedure TFormMain.btnRestoreLeftClick(Sender: TObject);
+begin
+  RestoreTrophySide(True);
+end;
+
+
+procedure TFormMain.btnSavesStartSinkClick(Sender: TObject);
+var
+  LeftIP, DestIP: string;
+  LeftUserID, DestUserID: string;
+  DestUserText: string;
+  Selected: TArray<TPS4SaveGame>;
+  BackupRoot: string;
+  SamePS4: Boolean;
+  AutomaticMode: Boolean;
+  I: Integer;
+begin
+  LeftIP := Trim(edtIpLeft.Text);
+  DestIP := Trim(edtIpRight.Text);
+  AutomaticMode := IsAutomaticSyncMode;
+
+  if (LeftIP = '') or (DestIP = '') then
+  begin
+    ShowLocalizedMessage('Informe o IP de origem e o IP de destino.');
+    Exit;
+  end;
+  if not SameText(LeftIP, FLoadedLeftIP) then
+  begin
+    ShowLocalizedMessage('Carregue os SAVES do IP de origem antes de iniciar a sincronia.');
+    Exit;
+  end;
+  if cmbUserLeft.ItemIndex < 0 then
+  begin
+    ShowLocalizedMessage('Selecione o usuario de origem.');
+    Exit;
+  end;
+  if cmbUserRight.ItemIndex < 0 then
+  begin
+    ShowLocalizedMessage('Selecione o usuario de destino.');
+    Exit;
+  end;
+  if AutomaticMode and not FLeftUserActivated then
+  begin
+    ShowLocalizedMessage(ActivationHelpText(FLeftUsers[cmbUserLeft.ItemIndex].UserID));
+    Exit;
+  end;
+  if AutomaticMode and not FDestUserActivated then
+  begin
+    ShowLocalizedMessage(ActivationHelpText(FDestUsers[cmbUserRight.ItemIndex].UserID));
+    Exit;
+  end;
+  if not SameText(FLeftUsers[cmbUserLeft.ItemIndex].UserID, FLoadedLeftUserID) then
+  begin
+    ShowLocalizedMessage('Carregue os SAVES do usuario de origem selecionado antes de iniciar a sincronia.');
+    Exit;
+  end;
+  if SameText(LeftIP, DestIP) and
+     SameText(FLeftUsers[cmbUserLeft.ItemIndex].UserID, FDestUsers[cmbUserRight.ItemIndex].UserID) then
+  begin
+    ShowLocalizedMessage('No mesmo PS4, selecione usuarios diferentes para origem e destino.');
+    Exit;
+  end;
+  LeftUserID := FLeftUsers[cmbUserLeft.ItemIndex].UserID;
+  DestUserID := FDestUsers[cmbUserRight.ItemIndex].UserID;
+  DestUserText := cmbUserRight.Items[cmbUserRight.ItemIndex];
+  SamePS4 := SameText(LeftIP, DestIP);
+
+  SetLength(Selected, 0);
+  for I := 0 to clbSavesLeft.Items.Count - 1 do
+    if clbSavesLeft.Checked[I] then
+    begin
+      SetLength(Selected, Length(Selected) + 1);
+      Selected[High(Selected)] := FViewSaves[I];
+    end;
+
+  if Length(Selected) = 0 then
+  begin
+    ShowLocalizedMessage(TranslateSyncText('NeedGame', FCurrentLanguage));
+    Exit;
+  end;
+
+  if not AutomaticMode then
+  begin
+    if MessageDlg(TranslateSyncText('ManualTitle', FCurrentLanguage, Length(Selected)) + sLineBreak + sLineBreak +
+       TranslateSyncText('ManualBody', FCurrentLanguage),
+       mtConfirmation, [mbYes, mbNo], 0) <> mrYes then
+      Exit;
+  end
+  else if not SamePS4 then
+  begin
+    if MessageDlg(TranslateSyncText('AgentTitle', FCurrentLanguage, Length(Selected)) + sLineBreak + sLineBreak +
+       TranslateSyncText('AgentBody', FCurrentLanguage, 0, DestUserText),
+       mtConfirmation, [mbYes, mbNo], 0) <> mrYes then
+      Exit;
+  end;
+
+  BackupRoot := TPath.Combine(ExtractFileDir(ParamStr(0)), DECRYPTED_BACKUP_FOLDER);
+  RunWorker(
+    procedure
+    begin
+      ResetSyncProgress;
+      if not AutomaticMode then
+        SyncPS4Saves(LeftIP, DestIP, PS4_FTP_PORT, Selected, DestUserID, AddLog)
+      else if SamePS4 then
+        SyncPS4SavesOnConsole(LeftIP, LeftUserID, DestUserID, Selected, AddLog)
+      else
+        SyncPS4SavesDecrypted(LeftIP, DestIP, LeftUserID, DestUserID,
+          Selected, BackupRoot, AddLog, UpdateSyncProgress);
+    end,
+    procedure
+    begin
+      UncheckAllSaves;
+      if not AutomaticMode then
+      begin
+        AddLog(TranslateSyncText('ManualLog', FCurrentLanguage));
+        ShowLocalizedMessage(TranslateSyncText('ManualDone', FCurrentLanguage));
+      end
+      else if SamePS4 then
+      begin
+        AddLog(TranslateSyncText('SameLog', FCurrentLanguage));
+        LoadDestSavesForSelectedUser;
+        ShowLocalizedMessage(TranslateSyncText('SameLog', FCurrentLanguage));
+      end
+      else
+      begin
+        AddLog(TranslateSyncText('AgentLog', FCurrentLanguage));
+        LoadDestSavesForSelectedUser;
+        ShowLocalizedMessage(TranslateSyncText('AgentDone', FCurrentLanguage, 0, '', BackupRoot));
+      end;
+    end,
+    TranslateSyncText('SyncError', FCurrentLanguage));
+end;
+
+procedure TFormMain.btnSavesLoadLeftClick(Sender: TObject);
+begin
+  ValidateLeftUserAndLoadSaves;
+end;
+
+procedure TFormMain.btnLoadSaveRightClick(Sender: TObject);
+begin
+  ValidateDestUserAndLoadSaves;
+end;
+
+procedure TFormMain.btnExportLeftClick(Sender: TObject);
+var
+  LeftIP, BackupRoot: string;
+  Selected: TArray<TPS4SaveGame>;
+  I: Integer;
+begin
+  btnStartExportClick(Sender);
+  Exit;
+
+  LeftIP := Trim(edtIpLeft.Text);
+  if (LeftIP = '') or (cmbUserLeft.ItemIndex < 0) then
+  begin
+    ShowLocalizedMessage('Informe o IP e selecione o usuario de origem.');
+    Exit;
+  end;
+  SetLength(Selected, 0);
+  for I := 0 to clbSavesLeft.Items.Count - 1 do
+    if clbSavesLeft.Checked[I] then
+    begin
+      SetLength(Selected, Length(Selected) + 1);
+      Selected[High(Selected)] := FViewSaves[I];
+    end;
+  if Length(Selected) = 0 then
+  begin
+    ShowLocalizedMessage(TranslateSyncText('NeedGame', FCurrentLanguage));
+    Exit;
+  end;
+  BackupRoot := TPath.Combine(TPath.Combine(ExtractFileDir(ParamStr(0)), 'saves'),
+    FormatDateTime('yyyy-mm-dd_hh-nn-ss', Now));
+  RunWorker(
+    procedure
+    begin
+      ExportPS4SavesDecrypted(LeftIP, PS4_FTP_PORT, Selected, BackupRoot,
+        AddLog, nil);
+    end,
+    procedure
+    begin
+      AddLog('Backup concluido: ' + BackupRoot);
+      UncheckAllSaves;
+    end,
+    'Falha ao criar backup: ');
+end;
+
+procedure TFormMain.btnExportRightClick(Sender: TObject);
+var
+  RightIP, BackupRoot: string;
+  Selected: TArray<TPS4SaveGame>;
+  I: Integer;
+begin
+  btnStartExportClick(Sender);
+  Exit;
+
+  RightIP := Trim(edtIpRight.Text);
+  if (RightIP = '') or (cmbUserRight.ItemIndex < 0) then
+  begin
+    ShowLocalizedMessage('Informe o IP e selecione o usuario de destino.');
+    Exit;
+  end;
+  SetLength(Selected, 0);
+  for I := 0 to clbSavesRight.Items.Count - 1 do
+    if clbSavesRight.Checked[I] then
+    begin
+      SetLength(Selected, Length(Selected) + 1);
+      Selected[High(Selected)] := FDestViewSaves[I];
+    end;
+  if Length(Selected) = 0 then
+  begin
+    ShowLocalizedMessage(TranslateSyncText('NeedGame', FCurrentLanguage));
+    Exit;
+  end;
+  BackupRoot := TPath.Combine(TPath.Combine(ExtractFileDir(ParamStr(0)), 'saves'),
+    FormatDateTime('yyyy-mm-dd_hh-nn-ss', Now));
+  RunWorker(
+    procedure
+    begin
+      ExportPS4SavesDecrypted(RightIP, PS4_FTP_PORT, Selected, BackupRoot,
+        AddLog, nil);
+    end,
+    procedure
+    begin
+      AddLog('Backup concluido: ' + BackupRoot);
+      UncheckAllSaves;
+    end,
+    'Falha ao criar backup: ');
+end;
+
+procedure TFormMain.btnImportLeftClick(Sender: TObject);
+var
+  LeftIP, SaveFolder: string;
+begin
+  btnStartImportClick(Sender);
+  Exit;
+
+  LeftIP := Trim(edtIpLeft.Text);
+  if (LeftIP = '') or (cmbUserLeft.ItemIndex < 0) then
+  begin
+    ShowLocalizedMessage('Informe o IP e selecione o usuario de origem.');
+    Exit;
+  end;
+
+  SaveFolder := TPath.Combine(ExtractFileDir(ParamStr(0)), 'saves');
+  if not TDirectory.Exists(SaveFolder) then
+    System.SysUtils.ForceDirectories(SaveFolder);
+  if not SelectDirectory('Selecione o save para importar', SaveFolder, SaveFolder) then
+    Exit;
+
+  if MessageDlg('Os saves encontrados nesta pasta serao importados para o usuario de origem. Deseja continuar?',
+    mtConfirmation, [mbYes, mbNo], 0) <> mrYes then Exit;
+  RunWorker(
+    procedure begin ImportPS4SaveBackup(LeftIP,
+      FLeftUsers[cmbUserLeft.ItemIndex].UserID, SaveFolder,
+      IsAutomaticSyncMode, AddLog); end,
+    procedure
+    begin
+      AddLog('Importacao concluida para o PS4 de origem.');
+      if cmbUserLeft.ItemIndex >= 0 then
+        LoadLeftSavesForSelectedUser;
+    end,
+    'Falha ao importar saves: ');
+end;
+
+procedure TFormMain.btnImportRightClick(Sender: TObject);
+var
+  RightIP, SaveFolder: string;
+begin
+  btnStartImportClick(Sender);
+  Exit;
+
+  RightIP := Trim(edtIpRight.Text);
+  if (RightIP = '') or (cmbUserRight.ItemIndex < 0) then
+  begin
+    ShowLocalizedMessage('Informe o IP e selecione o usuario de destino.');
+    Exit;
+  end;
+
+  SaveFolder := TPath.Combine(ExtractFileDir(ParamStr(0)), 'saves');
+  if not TDirectory.Exists(SaveFolder) then
+    System.SysUtils.ForceDirectories(SaveFolder);
+  if not SelectDirectory('Selecione o save para importar', SaveFolder, SaveFolder) then
+    Exit;
+
+  if MessageDlg('Os saves encontrados nesta pasta serao importados para o usuario de destino. Deseja continuar?',
+    mtConfirmation, [mbYes, mbNo], 0) <> mrYes then Exit;
+  RunWorker(
+    procedure begin ImportPS4SaveBackup(RightIP,
+      FDestUsers[cmbUserRight.ItemIndex].UserID, SaveFolder,
+      IsAutomaticSyncMode, AddLog); end,
+    procedure
+    begin
+      AddLog('Importacao concluida para o PS4 de destino.');
+      MessageDlg('Importacao concluida para o PS4 de destino.', mtInformation, [mbOK], 0);
+      if cmbUserRight.ItemIndex >= 0 then
+        LoadDestSavesForSelectedUser;
+    end,
+    'Falha ao importar saves: ');
+end;
+
+procedure TFormMain.btnRightSelectAllClick(Sender: TObject);
+var
+  I: Integer;
+begin
+  for I := 0 to clbSavesRight.Items.Count - 1 do
+    clbSavesRight.Checked[I] := True;
+end;
+
+procedure TFormMain.btnRightSelectNoneClick(Sender: TObject);
+var
+  I: Integer;
+begin
+  for I := 0 to clbSavesRight.Items.Count - 1 do
+    clbSavesRight.Checked[I] := False;
+end;
+end.
+
+
+

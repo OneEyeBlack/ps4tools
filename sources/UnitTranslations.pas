@@ -20,6 +20,8 @@ type
     SyncType: string;
     Automatic: string;
     Manual: string;
+    SyncPayload: string;
+    SyncManual: string;
     SelectAll: string;
     SelectNone: string;
     StartSync: string;
@@ -29,6 +31,7 @@ type
     Delete: string;
     SavesTab: string;
     TrophiesTab: string;
+    GamesTab: string;
     TrophyLoad: string;
     TrophyBackup: string;
     TrophyRestore: string;
@@ -54,6 +57,26 @@ type
     TrophyColumnGame: string;
     TrophyColumnTotal: string;
     TrophyColumnObtained: string;
+    AvatarTab: string;
+    DescricaoUsuarioDestino: string;
+    AvatarHint: string;
+    AvatarBrowse: string;
+    AvatarCreate: string;
+    AvatarSend: string;
+    AvatarHintBrowse: string;
+    AvatarHintCreate: string;
+    AvatarHintSend: string;
+    OperationMode: string;
+    SamePlayStation: string;
+    OtherPlayStation: string;
+    Converter: string;
+    ConverterTexconv: string;
+    ConverterInternal: string;
+    Image: string;
+    Name: string;
+    SaveLocally: string;
+    TransparentBackground: string;
+    ImageFilter: string;
   end;
 
 function LanguageName(ALanguage: TAppLanguage): string;
@@ -75,12 +98,13 @@ begin
     alRussian: Result := 'Русский';
     alJapanese: Result := '日本語';
   end;
+
 end;
 
 function GetTranslations(ALanguage: TAppLanguage): TTranslations;
 begin
   Result.FormCaption := 'PS4 Tools';
-  Result.LeftIP := 'PS4 Left IP';
+  Result.LeftIP := 'PS4 IP';
   Result.RightIP := 'PS4 Destination IP';
   Result.LeftUser := 'Left User';
   Result.RightUser := 'Destination User';
@@ -89,6 +113,8 @@ begin
   Result.SyncType := 'Sync Type:';
   Result.Automatic := 'Automatic';
   Result.Manual := 'Manual';
+  Result.SyncPayload := 'Payload';
+  Result.SyncManual := 'Manual';
   Result.SelectAll := 'Select All';
   Result.SelectNone := 'Select None';
   Result.StartSync := 'Start Sync';
@@ -98,6 +124,7 @@ begin
   Result.Delete := 'Delete';
   Result.SavesTab := 'Saves';
   Result.TrophiesTab := 'Trophies';
+  Result.GamesTab := 'Games';
   Result.TrophyLoad := 'Load';
   Result.TrophyBackup := 'Backup';
   Result.TrophyRestore := 'Restore';
@@ -123,6 +150,90 @@ begin
   Result.TrophyColumnGame := 'Game';
   Result.TrophyColumnTotal := 'Total';
   Result.TrophyColumnObtained := 'Obtained';
+  Result.AvatarTab := 'Avatar';
+  Result.DescricaoUsuarioDestino := 'The user selected in [Destination User] will receive the Avatar.';
+  Result.AvatarHint := 'Creates avatar.png (440x400), avatar64/128/260/440.dds and online.json.';
+  Result.AvatarBrowse := 'Select...';
+  Result.AvatarCreate := 'Create image';
+  Result.AvatarSend := 'Send avatar';
+  Result.AvatarHintBrowse := 'Select the source image for the avatar';
+  Result.AvatarHintCreate := 'Generate only avatar.png locally (DDS and online.json are created when sending)';
+  Result.AvatarHintSend := 'Generate and send the avatar files to the destination user';
+  Result.OperationMode := 'Source user';
+  Result.SamePlayStation := 'SAME PLAYSTATION';
+  Result.OtherPlayStation := 'TO ANOTHER PLAYSTATION';
+  Result.Converter := 'Converter:';
+  Result.ConverterTexconv := 'Texconv.exe (DirectXTex)';
+  Result.ConverterInternal := 'Internal Delphi code (simple)';
+  Result.Image := 'Image:';
+  Result.Name := 'Name:';
+  Result.SaveLocally := 'Save files locally';
+  Result.TransparentBackground := 'Remove background (transparent)';
+  Result.ImageFilter := 'Images|*.png;*.jpg;*.jpeg;*.bmp|All files|*.*';
+  if ALanguage = alPortugueseBrazil then
+  begin
+    Result.AvatarTab := 'Avatar';
+    Result.DescricaoUsuarioDestino := 'O usuário selecionado em [Usuário Destino] é quem receberá o Avatar.';
+    Result.AvatarHint := 'O envio cria avatar.png (440x400), avatar64/128/260/440.dds e online.json.';
+    Result.AvatarBrowse := 'Selecionar...';
+    Result.AvatarCreate := 'Criar imagem';
+    Result.AvatarSend := 'Enviar avatar';
+    Result.AvatarHintBrowse := 'Selecionar a imagem de origem do avatar';
+    Result.AvatarHintCreate := 'Gerar localmente apenas o avatar.png (DDS e online.json são criados no envio)';
+    Result.AvatarHintSend := 'Gerar e enviar os arquivos para o usuário destino';
+  end;
+  if ALanguage = alSpanish then
+  begin
+    Result.DescricaoUsuarioDestino := 'El usuario seleccionado en [Usuario de destino] recibirá el Avatar.';
+    Result.AvatarHint := 'Crea avatar.png (440x400), avatar64/128/260/440.dds y online.json.';
+  end
+  else if ALanguage = alGerman then
+  begin
+    Result.DescricaoUsuarioDestino := 'Der unter [Zielbenutzer] ausgewählte Benutzer erhält den Avatar.';
+    Result.AvatarHint := 'Erstellt avatar.png (440x400), avatar64/128/260/440.dds und online.json.';
+  end
+  else if ALanguage = alFrench then
+  begin
+    Result.DescricaoUsuarioDestino := 'L’utilisateur sélectionné dans [Utilisateur destination] recevra l’Avatar.';
+    Result.AvatarHint := 'Crée avatar.png (440x400), avatar64/128/260/440.dds et online.json.';
+  end
+  else if ALanguage = alRussian then
+  begin
+    Result.DescricaoUsuarioDestino := 'Аватар получит пользователь, выбранный в разделе [Пользователь назначения].';
+    Result.AvatarHint := 'Создает avatar.png (440x400), avatar64/128/260/440.dds и online.json.';
+  end
+  else if ALanguage = alJapanese then
+  begin
+    Result.DescricaoUsuarioDestino := '[送信先ユーザー]で選択したユーザーがアバターを受け取ります。';
+    Result.AvatarHint := 'avatar.png (440x400)、avatar64/128/260/440.dds、online.jsonを作成します。';
+  end;
+
+  if ALanguage = alPortugueseBrazil then
+  begin
+    Result.OperationMode := 'Usuário origem'; Result.SamePlayStation := 'MESMO PLAYSTATION';
+    Result.OtherPlayStation := 'PARA OUTRO PLAYSTATION'; Result.Converter := 'Conversor:';
+    Result.ConverterInternal := 'Código interno Delphi (simples)'; Result.Image := 'Imagem:';
+    Result.Name := 'Nome:'; Result.SaveLocally := 'Salvar arquivos localmente';
+    Result.TransparentBackground := 'Remover fundo (transparente)';
+    Result.ImageFilter := 'Imagens|*.png;*.jpg;*.jpeg;*.bmp|Todos os arquivos|*.*';
+    Result.GamesTab := 'Jogos';
+    Result.SyncPayload := 'Payload';
+    Result.SyncManual := 'Manual';
+  end;
+  case ALanguage of
+    alSpanish: Result.GamesTab := 'Juegos';
+    alGerman: Result.GamesTab := 'Spiele';
+    alFrench: Result.GamesTab := 'Jeux';
+    alRussian: Result.GamesTab := 'Игры';
+    alJapanese: Result.GamesTab := 'ゲーム';
+  end;
+  case ALanguage of
+    alSpanish: Result.ImageFilter := 'Imágenes|*.png;*.jpg;*.jpeg;*.bmp|Todos los archivos|*.*';
+    alGerman: Result.ImageFilter := 'Bilder|*.png;*.jpg;*.jpeg;*.bmp|Alle Dateien|*.*';
+    alFrench: Result.ImageFilter := 'Images|*.png;*.jpg;*.jpeg;*.bmp|Tous les fichiers|*.*';
+    alRussian: Result.ImageFilter := 'Изображения|*.png;*.jpg;*.jpeg;*.bmp|Все файлы|*.*';
+    alJapanese: Result.ImageFilter := '画像|*.png;*.jpg;*.jpeg;*.bmp|すべてのファイル|*.*';
+  end;
 
   case ALanguage of
     alPortugueseBrazil:
@@ -267,51 +378,58 @@ begin
     alEnglish:
       begin
         Result.LoadUsers := 'Connect';
-        Result.StartSync := '<=  Start Sync  =>';
-        Result.TrophySortLeft := 'A-Z L';
-        Result.TrophySortRight := 'A-Z R';
+        Result.StartSync := 'Start Sync';
+        Result.ExportSave := 'Export'; Result.ImportSave := 'Import';
+        Result.TrophyBackup := 'Export'; Result.TrophyRestore := 'Import';
+        Result.TrophySortLeft := 'A-Z'; Result.TrophySortRight := 'A-Z';
       end;
     alPortugueseBrazil:
       begin
         Result.LoadUsers := 'Conectar';
-        Result.StartSync := '<=  Iniciar Sincronia  =>';
-        Result.TrophySortLeft := 'A-Z E';
-        Result.TrophySortRight := 'A-Z D';
+        Result.StartSync := 'Iniciar Sincronia';
+        Result.ExportSave := 'Exportar'; Result.ImportSave := 'Importar';
+        Result.TrophyBackup := 'Exportar'; Result.TrophyRestore := 'Importar';
+        Result.TrophySortLeft := 'A-Z'; Result.TrophySortRight := 'A-Z';
       end;
     alSpanish:
       begin
         Result.LoadUsers := 'Conectar';
-        Result.StartSync := '<=  Iniciar sincronización  =>';
-        Result.TrophySortLeft := 'A-Z I';
-        Result.TrophySortRight := 'A-Z D';
+        Result.StartSync := 'Iniciar sincronización';
+        Result.ExportSave := 'Exportar'; Result.ImportSave := 'Importar';
+        Result.TrophyBackup := 'Exportar'; Result.TrophyRestore := 'Importar';
+        Result.TrophySortLeft := 'A-Z'; Result.TrophySortRight := 'A-Z';
       end;
     alGerman:
       begin
         Result.LoadUsers := 'Verbinden';
-        Result.StartSync := '<=  Synchronisieren  =>';
-        Result.TrophySortLeft := 'A-Z L';
-        Result.TrophySortRight := 'A-Z R';
+        Result.StartSync := 'Synchronisieren';
+        Result.ExportSave := 'Exportieren'; Result.ImportSave := 'Importieren';
+        Result.TrophyBackup := 'Exportieren'; Result.TrophyRestore := 'Importieren';
+        Result.TrophySortLeft := 'A-Z'; Result.TrophySortRight := 'A-Z';
       end;
     alFrench:
       begin
         Result.LoadUsers := 'Connecter';
-        Result.StartSync := '<=  Synchroniser  =>';
-        Result.TrophySortLeft := 'A-Z G';
-        Result.TrophySortRight := 'A-Z D';
+        Result.StartSync := 'Synchroniser';
+        Result.ExportSave := 'Exporter'; Result.ImportSave := 'Importer';
+        Result.TrophyBackup := 'Exporter'; Result.TrophyRestore := 'Importer';
+        Result.TrophySortLeft := 'A-Z'; Result.TrophySortRight := 'A-Z';
       end;
     alRussian:
       begin
         Result.LoadUsers := 'Подключить';
-        Result.StartSync := '<=  Синхронизация  =>';
-        Result.TrophySortLeft := 'А-Я Л';
-        Result.TrophySortRight := 'А-Я П';
+        Result.StartSync := 'Синхронизация';
+        Result.ExportSave := 'Экспорт'; Result.ImportSave := 'Импорт';
+        Result.TrophyBackup := 'Экспорт'; Result.TrophyRestore := 'Импорт';
+        Result.TrophySortLeft := 'А-Я'; Result.TrophySortRight := 'А-Я';
       end;
     alJapanese:
       begin
         Result.LoadUsers := '接続';
-        Result.StartSync := '<=  同期開始  =>';
-        Result.TrophySortLeft := 'A-Z 左';
-        Result.TrophySortRight := 'A-Z 右';
+        Result.StartSync := '同期開始';
+        Result.ExportSave := 'エクスポート'; Result.ImportSave := 'インポート';
+        Result.TrophyBackup := 'エクスポート'; Result.TrophyRestore := 'インポート';
+        Result.TrophySortLeft := 'A-Z'; Result.TrophySortRight := 'A-Z';
       end;
   end;
 
@@ -401,6 +519,59 @@ begin
         Result.HintRestore := 'ユーザーのトロフィーを復元';
       end;
   end;
+
+  { Source/Destination express the role of each side, not its visual position. }
+  case ALanguage of
+    alEnglish:
+      begin
+        Result.LeftIP := 'PS4 IP';
+        Result.StartSync := 'Start Sync';
+        Result.LeftUser := 'Source User'; Result.RightUser := 'Destination User';
+        Result.OperationMode := 'Operation Mode';
+      end;
+    alPortugueseBrazil:
+      begin
+        Result.LeftIP := 'IP PS4';
+        Result.StartSync := 'Iniciar Sincronia';
+        Result.LeftUser := 'Usuário Origem'; Result.RightUser := 'Usuário Destino';
+        Result.OperationMode := 'Modo de Operação';
+      end;
+    alSpanish:
+      begin
+        Result.LeftIP := 'IP PS4';
+        Result.StartSync := 'Iniciar sincronización';
+        Result.LeftUser := 'Usuario de origen'; Result.RightUser := 'Usuario de destino';
+        Result.OperationMode := 'Modo de operación';
+      end;
+    alGerman:
+      begin
+        Result.LeftIP := 'PS4-IP';
+        Result.StartSync := 'Synchronisieren';
+        Result.LeftUser := 'Quellbenutzer'; Result.RightUser := 'Zielbenutzer';
+        Result.OperationMode := 'Betriebsmodus';
+      end;
+    alFrench:
+      begin
+        Result.LeftIP := 'IP PS4';
+        Result.StartSync := 'Synchroniser';
+        Result.LeftUser := 'Utilisateur source'; Result.RightUser := 'Utilisateur destination';
+        Result.OperationMode := 'Mode opératoire';
+      end;
+    alRussian:
+      begin
+        Result.LeftIP := 'IP PS4';
+        Result.StartSync := 'Синхронизация';
+        Result.LeftUser := 'Пользователь источника'; Result.RightUser := 'Пользователь назначения';
+        Result.OperationMode := 'Режим работы';
+      end;
+    alJapanese:
+      begin
+        Result.LeftIP := 'PS4 IP';
+        Result.StartSync := '同期開始';
+        Result.LeftUser := '元のユーザー'; Result.RightUser := '宛先ユーザー';
+        Result.OperationMode := '操作モード';
+      end;
+  end;
 end;
 
 function TranslateText(const AText: string; ALanguage: TAppLanguage): string;
@@ -423,6 +594,46 @@ begin
     Result := StringReplace(Result, 'Processando...', 'Processing...', [rfReplaceAll]);
     Result := StringReplace(Result, 'usuario(s)', 'user(s)', [rfReplaceAll]);
     Result := StringReplace(Result, 'save(s)', 'save(s)', [rfReplaceAll]);
+    Result := StringReplace(Result, 'A criação das imagens pode demorar. Aguarde enquanto o processo é concluído...', 'Image creation may take some time. Please wait while the process completes...', [rfReplaceAll]);
+    Result := StringReplace(Result, 'Avatar enviado. Reinicie o PS4 ou faça logout/login no usuário.', 'Avatar sent. Restart the PS4 or log out and back in to the user.', [rfReplaceAll]);
+    Result := StringReplace(Result, 'Selecionar saves para enviar', 'Select saves to send', [rfReplaceAll]);
+    Result := StringReplace(Result, 'Selecionar trofeus para enviar', 'Select trophies to send', [rfReplaceAll]);
+    Result := StringReplace(Result, 'Selecionar todos', 'Select all', [rfReplaceAll]);
+    Result := StringReplace(Result, 'Enviar selecionados', 'Send selected', [rfReplaceAll]);
+    Result := StringReplace(Result, 'Cancelar', 'Cancel', [rfReplaceAll]);
+    Result := StringReplace(Result, 'Informe o IP do PS4.', 'Enter the PS4 IP address.', [rfReplaceAll]);
+    Result := StringReplace(Result, 'Selecione uma imagem valida.', 'Select a valid image.', [rfReplaceAll]);
+    Result := StringReplace(Result, 'Carregue e selecione o perfil cache.', 'Load and select the cache profile.', [rfReplaceAll]);
+    Result := StringReplace(Result, 'Criando imagens localmente...', 'Creating images locally...', [rfReplaceAll]);
+    Result := StringReplace(Result, 'Imagens criadas em:', 'Images created in:', [rfReplaceAll]);
+    Result := StringReplace(Result, 'Falha ao criar imagens.', 'Failed to create images.', [rfReplaceAll]);
+    Result := StringReplace(Result, 'Preparando imagens do avatar...', 'Preparing avatar images...', [rfReplaceAll]);
+    Result := StringReplace(Result, 'Gerando arquivos do avatar...', 'Generating avatar files...', [rfReplaceAll]);
+    Result := StringReplace(Result, 'Arquivos salvos em:', 'Files saved in:', [rfReplaceAll]);
+    Result := StringReplace(Result, 'Enviando para', 'Uploading to', [rfReplaceAll]);
+    Result := StringReplace(Result, 'Falha ao enviar avatar:', 'Failed to send avatar:', [rfReplaceAll]);
+    Result := StringReplace(Result, 'Imagem selecionada:', 'Selected image:', [rfReplaceAll]);
+    Result := StringReplace(Result, 'Selecione o usuário destino antes de enviar o avatar.', 'Select the destination user before sending the avatar.', [rfReplaceAll]);
+    Result := StringReplace(Result, 'Verificando PS4 Save Agent na origem...', 'Checking PS4 Save Agent on the source...', [rfReplaceAll]);
+    Result := StringReplace(Result, 'Verificando PS4 Save Agent no destino...', 'Checking PS4 Save Agent on the destination...', [rfReplaceAll]);
+    Result := StringReplace(Result, 'Carregando usuarios do PS4 de origem...', 'Loading users from the source PS4...', [rfReplaceAll]);
+    Result := StringReplace(Result, 'Carregando usuarios do PS4 de destino...', 'Loading users from the destination PS4...', [rfReplaceAll]);
+    Result := StringReplace(Result, 'Falha ao conectar/carregar origem:', 'Failed to connect/load source:', [rfReplaceAll]);
+    Result := StringReplace(Result, 'Falha ao conectar/carregar destino:', 'Failed to connect/load destination:', [rfReplaceAll]);
+    Result := StringReplace(Result, 'Delete concluido.', 'Delete completed.', [rfReplaceAll]);
+    Result := StringReplace(Result, 'Exportacao concluida:', 'Export completed:', [rfReplaceAll]);
+    Result := StringReplace(Result, 'Importacao concluida', 'Import completed', [rfReplaceAll]);
+    Result := StringReplace(Result, 'Backup concluido:', 'Backup completed:', [rfReplaceAll]);
+    Result := StringReplace(Result, 'Sincronizacao concluida.', 'Synchronization completed.', [rfReplaceAll]);
+    Result := StringReplace(Result, 'Informe o IP dos dois PS4.', 'Enter both PS4 IP addresses.', [rfReplaceAll]);
+    Result := StringReplace(Result, 'Selecione pelo menos um jogo na lista de origem.', 'Select at least one game in the source list.', [rfReplaceAll]);
+    Result := StringReplace(Result, 'Todos os trofeus selecionados ja existem no destino e foram ignorados:', 'All selected trophies already exist on the destination and were skipped:', [rfReplaceAll]);
+    Result := StringReplace(Result, 'Erro ao sincronizar trofeus:', 'Error synchronizing trophies:', [rfReplaceAll]);
+    Result := StringReplace(Result, 'Informe o IP e marque pelo menos um jogo de trofeus.', 'Enter the IP and select at least one trophy game.', [rfReplaceAll]);
+    Result := StringReplace(Result, 'Erro ao excluir trofeus:', 'Error deleting trophies:', [rfReplaceAll]);
+    Result := StringReplace(Result, 'Erro ao ordenar trofeus:', 'Error sorting trophies:', [rfReplaceAll]);
+    Result := StringReplace(Result, 'Restaurar trofeus', 'Restore trophies', [rfReplaceAll]);
+    Result := StringReplace(Result, 'Restauracao de trofeus concluida.', 'Trophy restoration completed.', [rfReplaceAll]);
   end;
 
   if ALanguage = alSpanish then
@@ -435,6 +646,8 @@ begin
     Result := StringReplace(Result, 'No mesmo PS4, selecione usuarios diferentes para origem e destino.', 'En la misma PS4, seleccione usuarios diferentes para el origen y el destino.', [rfReplaceAll]);
     Result := StringReplace(Result, 'Carregue e selecione ao menos um jogo para sincronizar.', 'Cargue y seleccione al menos un juego para sincronizar.', [rfReplaceAll]);
     Result := StringReplace(Result, 'Sincronia manual concluida.', 'Sincronización manual completada.', [rfReplaceAll]);
+    Result := StringReplace(Result, 'A criação das imagens pode demorar. Aguarde enquanto o processo é concluído...', 'La creación de imágenes puede tardar. Espere mientras finaliza el proceso...', [rfReplaceAll]);
+    Result := StringReplace(Result, 'Avatar enviado. Reinicie o PS4 ou faça logout/login no usuário.', 'Avatar enviado. Reinicie la PS4 o cierre e inicie sesión de nuevo.', [rfReplaceAll]);
   end
   else if ALanguage = alGerman then
   begin
@@ -468,9 +681,9 @@ begin
   end
   else if ALanguage = alEnglish then
   begin
-    Result := StringReplace(Result, 'Informe o IP de origem e o IP de destino.', 'Enter the Left and destination IP addresses.', [rfReplaceAll]);
-    Result := StringReplace(Result, 'Carregue os SAVES do IP de origem antes de iniciar a sincronia.', 'Load the Left IP saves before starting synchronization.', [rfReplaceAll]);
-    Result := StringReplace(Result, 'Selecione o usuario de origem.', 'Select the Left user.', [rfReplaceAll]);
+    Result := StringReplace(Result, 'Informe o IP de origem e o IP de destino.', 'Enter the source and destination IP addresses.', [rfReplaceAll]);
+    Result := StringReplace(Result, 'Carregue os SAVES do IP de origem antes de iniciar a sincronia.', 'Load the source IP saves before starting synchronization.', [rfReplaceAll]);
+    Result := StringReplace(Result, 'Selecione o usuario de origem.', 'Select the source user.', [rfReplaceAll]);
     Result := StringReplace(Result, 'Selecione o usuario de destino.', 'Select the destination user.', [rfReplaceAll]);
     Result := StringReplace(Result, 'Carregue e selecione ao menos um jogo para sincronizar.', 'Load and select at least one game to synchronize.', [rfReplaceAll]);
   end;

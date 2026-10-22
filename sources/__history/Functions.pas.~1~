@@ -1,0 +1,116 @@
+unit Functions;
+
+interface
+
+uses
+  System.SysUtils,
+  uPS4SaveManager,
+  uPS4SaveAgent;
+
+type
+  TPS4SaveUser = uPS4SaveManager.TPS4SaveUser;
+  TPS4SaveGame = uPS4SaveManager.TPS4SaveGame;
+  TPS4SaveLogEvent = uPS4SaveManager.TPS4SaveLogEvent;
+  TPS4SaveAgentLogEvent = uPS4SaveAgent.TPS4SaveAgentLogEvent;
+  TPS4SaveAgentProgressEvent = uPS4SaveAgent.TPS4SaveAgentProgressEvent;
+
+function ListPS4Users(const AHost: string; APort: Word): TArray<TPS4SaveUser>;
+function ListPS4SaveGamesForUser(const AHost: string; APort: Word;
+  const AUserID: string): TArray<TPS4SaveGame>;
+function PS4SaveDisplayText(const ASave: TPS4SaveGame): string;
+
+procedure EnsurePS4SaveAgentInstalled(const AHost: string;
+  ALog: TPS4SaveAgentLogEvent);
+procedure EnsurePS4SaveAgentReady(const AHost: string;
+  ALog: TPS4SaveAgentLogEvent);
+function GetPS4SaveAgentAccountID(const AHost, AUserID: string;
+  ALog: TPS4SaveAgentLogEvent): string;
+procedure DeletePS4SaveWithAgent(const AHost: string;
+  const ASave: TPS4SaveGame; ALog: TPS4SaveAgentLogEvent);
+procedure CleanupPS4StaleSavesWithAgent(const AHost, AUserID: string;
+  ALog: TPS4SaveAgentLogEvent);
+procedure SyncPS4Saves(const ASourceHost, ADestHost: string; APort: Word;
+  const ASaves: TArray<TPS4SaveGame>; const ADestUserID: string;
+  ALog: TPS4SaveLogEvent);
+procedure SyncPS4SavesOnConsole(const AHost: string;
+  const ASourceUserID, ADestUserID: string; const ASaves: TArray<TPS4SaveGame>;
+  ALog: TPS4SaveAgentLogEvent);
+procedure SyncPS4SavesDecrypted(const ASourceHost, ADestHost: string;
+  const ASourceUserID, ADestUserID: string; const ASaves: TArray<TPS4SaveGame>;
+  const ABackupRoot: string; ALog: TPS4SaveAgentLogEvent;
+  AProgress: TPS4SaveAgentProgressEvent);
+
+implementation
+
+function ListPS4Users(const AHost: string; APort: Word): TArray<TPS4SaveUser>;
+begin
+  Result := uPS4SaveManager.ListPS4Users(AHost, APort);
+end;
+
+function ListPS4SaveGamesForUser(const AHost: string; APort: Word;
+  const AUserID: string): TArray<TPS4SaveGame>;
+begin
+  Result := uPS4SaveManager.ListPS4SaveGamesForUser(AHost, APort, AUserID);
+end;
+
+function PS4SaveDisplayText(const ASave: TPS4SaveGame): string;
+begin
+  Result := uPS4SaveManager.PS4SaveDisplayText(ASave);
+end;
+
+procedure EnsurePS4SaveAgentInstalled(const AHost: string;
+  ALog: TPS4SaveAgentLogEvent);
+begin
+  uPS4SaveAgent.EnsurePS4SaveAgentInstalled(AHost, ALog);
+end;
+
+procedure EnsurePS4SaveAgentReady(const AHost: string;
+  ALog: TPS4SaveAgentLogEvent);
+begin
+  uPS4SaveAgent.EnsurePS4SaveAgentReady(AHost, ALog);
+end;
+
+function GetPS4SaveAgentAccountID(const AHost, AUserID: string;
+  ALog: TPS4SaveAgentLogEvent): string;
+begin
+  Result := uPS4SaveAgent.GetPS4SaveAgentAccountID(AHost, AUserID, ALog);
+end;
+
+procedure DeletePS4SaveWithAgent(const AHost: string;
+  const ASave: TPS4SaveGame; ALog: TPS4SaveAgentLogEvent);
+begin
+  uPS4SaveAgent.DeletePS4SaveWithAgent(AHost, ASave, ALog);
+end;
+
+procedure CleanupPS4StaleSavesWithAgent(const AHost, AUserID: string;
+  ALog: TPS4SaveAgentLogEvent);
+begin
+  uPS4SaveAgent.CleanupPS4StaleSavesWithAgent(AHost, AUserID, ALog);
+end;
+
+procedure SyncPS4Saves(const ASourceHost, ADestHost: string; APort: Word;
+  const ASaves: TArray<TPS4SaveGame>; const ADestUserID: string;
+  ALog: TPS4SaveLogEvent);
+begin
+  uPS4SaveManager.SyncPS4Saves(ASourceHost, ADestHost, APort, ASaves,
+    ADestUserID, ALog);
+end;
+
+procedure SyncPS4SavesOnConsole(const AHost: string;
+  const ASourceUserID, ADestUserID: string; const ASaves: TArray<TPS4SaveGame>;
+  ALog: TPS4SaveAgentLogEvent);
+begin
+  uPS4SaveAgent.SyncPS4SavesOnConsole(AHost, ASourceUserID, ADestUserID,
+    ASaves, ALog);
+end;
+
+procedure SyncPS4SavesDecrypted(const ASourceHost, ADestHost: string;
+  const ASourceUserID, ADestUserID: string; const ASaves: TArray<TPS4SaveGame>;
+  const ABackupRoot: string; ALog: TPS4SaveAgentLogEvent;
+  AProgress: TPS4SaveAgentProgressEvent);
+begin
+  uPS4SaveAgent.SyncPS4SavesDecrypted(ASourceHost, ADestHost, ASourceUserID,
+    ADestUserID, ASaves, ABackupRoot, ALog, AProgress);
+end;
+
+end.

@@ -8,7 +8,10 @@ uses
   UnitFunctions in 'sources\UnitFunctions.pas',
   UnitSaves in 'sources\UnitSaves.pas',
   UnitTranslations in 'sources\UnitTranslations.pas',
-  UnitTropheus in 'sources\UnitTropheus.pas';
+  UnitTropheus in 'sources\UnitTropheus.pas',
+  UnitAvatar in 'sources\UnitAvatar.pas',
+  UnitAvatarCrop in 'sources\UnitAvatarCrop.pas',
+  UnitAvatarMask in 'sources\UnitAvatarMask.pas';
 
 {$R *.res}
 

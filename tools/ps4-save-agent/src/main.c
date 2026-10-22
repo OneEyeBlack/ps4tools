@@ -16,19 +16,23 @@
 #include <fcntl.h>
 #include <netinet/in.h>
 #include <ps4/kernel.h>
+#include <signal.h>
+#include <ucontext.h>
 #include <stdarg.h>
 #include <stdint.h>
-#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
+#include <sys/param.h>
+#include <sys/mount.h>
 #include <sys/stat.h>
 #include <sys/syscall.h>
 #include <sys/types.h>
+#include <sys/reboot.h>
+#include <sys/syscall.h>
 #include <sys/wait.h>
-#include <sys/time.h>
 #include <time.h>
 #include <unistd.h>
 
@@ -38,7 +42,7 @@
 #define SAVE_AGENT_PORT 8084
 #endif
 
-#define SAVE_AGENT_VERSION "PS4SAVEAGENT 0.6"
+#define SAVE_AGENT_VERSION "PS4SAVEAGENT 2.7"
 #define SAVE_AGENT_LOG "/data/ps4-save-agent.log"
 #define WORK_ROOT "/data/ps4-save-agent"
 #define BUF_SIZE (512 * 1024)
@@ -78,32 +82,83 @@ typedef struct {
 } UmountOpt;
 
 static volatile int g_stop = 0;
+static int g_server_fd = -1;
 static int g_vsh_mount_ready = 0;
-static FILE *g_log_fp = NULL;
-
-/*
- * The system may terminate userland processes while powering off.  Keep the
- * agent shutdown-safe even when it receives a normal termination signal, and
- * do not perform any work from the signal handler itself.
- */
-static void request_stop(int signal_number)
-{
-  (void)signal_number;
-  g_stop = 1;
-}
 
 static void logf(const char *fmt, ...)
 {
+  FILE *fp;
   va_list ap;
 
-  if (g_log_fp == NULL)
+  fp = fopen(SAVE_AGENT_LOG, "a");
+  if (fp == NULL)
     return;
 
   va_start(ap, fmt);
-  vfprintf(g_log_fp, fmt, ap);
+  vfprintf(fp, fmt, ap);
   va_end(ap);
-  fprintf(g_log_fp, "\n");
-  fflush(g_log_fp);
+  fprintf(fp, "\n");
+  fclose(fp);
+}
+
+/* O agent morria sem deixar rastro no log ao receber o 2o import da mesma
+   execucao. Registrar o sinal fatal mostra a causa na proxima ocorrencia. */
+static char g_alt_stack[64 * 1024];
+static volatile int g_in_fatal = 0;
+int main(int argc, char **argv);
+
+/* Registra o endereco da falha, RIP/RSP/RBP e palavras da pilha proximas do
+   binario. Com llvm-nm/llvm-symbolizer no ELF (main estatico vs. main logado)
+   da para achar a funcao exata que derrubou o agent. */
+static void fatal_signal_action(int sig, siginfo_t *si, void *ctx)
+{
+  ucontext_t *uc = (ucontext_t *)ctx;
+  uint64_t *sp;
+  uint64_t main_addr = (uint64_t)(uintptr_t)&main;
+  int i, shown = 0;
+
+  if (g_in_fatal)
+    _exit(128 + sig);
+  g_in_fatal = 1;
+
+  logf("FATAL signal %d addr=%llx rip=%llx rsp=%llx rbp=%llx main=%llx",
+    sig, (unsigned long long)(uintptr_t)si->si_addr,
+    (unsigned long long)uc->uc_mcontext.mc_rip,
+    (unsigned long long)uc->uc_mcontext.mc_rsp,
+    (unsigned long long)uc->uc_mcontext.mc_rbp,
+    (unsigned long long)main_addr);
+
+  sp = (uint64_t *)(uintptr_t)uc->uc_mcontext.mc_rsp;
+  for (i = 0; i < 96 && shown < 24; i++)
+  {
+    uint64_t v = sp[i];
+    if (v > main_addr - 0x300000 && v < main_addr + 0x300000)
+    {
+      logf("  stack[%d]=%llx", i, (unsigned long long)v);
+      shown++;
+    }
+  }
+  _exit(128 + sig);
+}
+
+static void install_fatal_handlers(void)
+{
+  struct sigaction sa;
+  stack_t ss;
+  static const int sigs[] = { SIGSEGV, SIGBUS, SIGILL, SIGFPE, SIGABRT };
+  size_t i;
+
+  memset(&ss, 0, sizeof(ss));
+  ss.ss_sp = g_alt_stack;
+  ss.ss_size = sizeof(g_alt_stack);
+  sigaltstack(&ss, NULL);
+
+  memset(&sa, 0, sizeof(sa));
+  sa.sa_sigaction = fatal_signal_action;
+  sa.sa_flags = SA_SIGINFO | SA_ONSTACK;
+  sigemptyset(&sa.sa_mask);
+  for (i = 0; i < sizeof(sigs) / sizeof(sigs[0]); i++)
+    sigaction(sigs[i], &sa, NULL);
 }
 
 static void send_all(int fd, const void *data, size_t size)
@@ -533,6 +588,9 @@ static int unpack_archive(const char *archive_path, const char *dst, int skip_sc
     if (strcmp(line, "END\n") == 0)
       break;
 
+    if (line[0] == 'I' && line[1] == '\t')
+      continue;
+
     memset(rel, 0, sizeof(rel));
     if (line[0] == 'D' && line[1] == '\t')
     {
@@ -760,7 +818,10 @@ static int decrypt_sealed_key(const char *key_path, uint8_t dec_key[DEC_SEALEDKE
 
 static int generate_sealed_key(const char *key_path, uint8_t dec_key[DEC_SEALEDKEY_LEN])
 {
-  uint8_t sealed[ENC_SEALEDKEY_LEN];
+  /* O ioctl 0x40845303 (_IOR, tamanho 0x84) grava 0x84 bytes no buffer. Com
+     um buffer de apenas ENC_SEALEDKEY_LEN (0x60) a pilha era sobrescrita em
+     36 bytes, o que derrubava o agent (SIGSEGV) no import seguinte. */
+  uint8_t sealed[0x100];
   uint8_t *data;
   int fd;
   int ret;
@@ -778,7 +839,7 @@ static int generate_sealed_key(const char *key_path, uint8_t dec_key[DEC_SEALEDK
   fd = open(key_path, O_CREAT | O_WRONLY | O_TRUNC, 0644);
   if (fd < 0)
     return -3;
-  write(fd, sealed, sizeof(sealed));
+  write(fd, sealed, ENC_SEALEDKEY_LEN);
   fsync(fd);
   close(fd);
 
@@ -786,7 +847,7 @@ static int generate_sealed_key(const char *key_path, uint8_t dec_key[DEC_SEALEDK
   if (!data)
     return -4;
   memset(data, 0, 0x100);
-  memcpy(data, sealed, sizeof(sealed));
+  memcpy(data, sealed, ENC_SEALEDKEY_LEN);
 
   fd = open("/dev/pfsmgr", O_RDWR);
   if (fd < 0)
@@ -819,9 +880,9 @@ static int create_pfs_image(const char *img_path, const char *key_path,
   int fd;
   int ret;
 
-  img_size = wanted_size + (4 * 1024 * 1024);
-  if (img_size < (32 * 1024 * 1024))
-    img_size = 32 * 1024 * 1024;
+  img_size = wanted_size;
+  if (img_size < (3 * 1024 * 1024))
+    img_size = 3 * 1024 * 1024;
   img_size = ((img_size + 32767) / 32768) * 32768;
 
   ret = generate_sealed_key(key_path, dec_key);
@@ -1201,9 +1262,117 @@ static int patch_ps4_param_sfo(const char *mount_path, const char *dest_user)
   return 0;
 }
 
-static int update_savedata_db(const char *source_user, const char *dest_user,
-  const char *title, const char *save)
+typedef struct
 {
+  int valid;
+  char main_title[256];
+  char sub_title[256];
+  char detail[1024];
+  int has_user_param;
+  int user_param;
+} SfoMeta;
+
+static void sfo_copy_string(uint8_t *buf, size_t len, const char *key,
+  char *out, size_t out_size)
+{
+  size_t off = 0;
+  uint32_t used = 0;
+  size_t n;
+
+  if (find_sfo_value(buf, len, key, &off, &used) != 0 || used == 0 ||
+      off + used > len)
+    return;
+  n = used;
+  if (n >= out_size)
+    n = out_size - 1;
+  memcpy(out, buf + off, n);
+  out[n] = 0;
+}
+
+/* Le TITLE/SUBTITLE/DETAIL/LIST_PARAM do param.sfo do save montado. E a mesma
+   origem que o PS4 usa para preencher savedata.db em um save nativo; sem isso
+   a linha criada entre consoles fica com titulo vazio. */
+static void read_sfo_meta(const char *mount_path, SfoMeta *meta)
+{
+  char sfo_path[MAX_PATH_LEN];
+  struct stat st;
+  uint8_t *buf;
+  size_t off = 0;
+  uint32_t used = 0;
+  int fd;
+
+  memset(meta, 0, sizeof(*meta));
+  snprintf(sfo_path, sizeof(sfo_path), "%s/sce_sys/param.sfo", mount_path);
+  fd = open(sfo_path, O_RDONLY);
+  if (fd < 0)
+    return;
+  if (fstat(fd, &st) != 0 || st.st_size <= 0 || st.st_size > (1024 * 1024))
+  {
+    close(fd);
+    return;
+  }
+  buf = malloc((size_t)st.st_size);
+  if (buf == NULL || pread(fd, buf, (size_t)st.st_size, 0) != st.st_size)
+  {
+    free(buf);
+    close(fd);
+    return;
+  }
+  close(fd);
+
+  sfo_copy_string(buf, (size_t)st.st_size, "MAINTITLE",
+    meta->main_title, sizeof(meta->main_title));
+  if (meta->main_title[0] == 0)
+    sfo_copy_string(buf, (size_t)st.st_size, "TITLE",
+      meta->main_title, sizeof(meta->main_title));
+  sfo_copy_string(buf, (size_t)st.st_size, "SUBTITLE",
+    meta->sub_title, sizeof(meta->sub_title));
+  sfo_copy_string(buf, (size_t)st.st_size, "DETAIL",
+    meta->detail, sizeof(meta->detail));
+  if (find_sfo_value(buf, (size_t)st.st_size, "SAVEDATA_LIST_PARAM",
+      &off, &used) == 0 && used >= 4 && off + 4 <= (size_t)st.st_size)
+  {
+    meta->user_param = (int)rd32(buf + off);
+    meta->has_user_param = 1;
+  }
+  meta->valid = 1;
+  free(buf);
+  logf("param.sfo meta main='%s' sub='%s' list_param=%d",
+    meta->main_title, meta->sub_title, meta->user_param);
+}
+
+/* O banco nativo do PS4 tem o indice savedata_index e user_version=7. O banco
+   criado pelo agent saia com user_version=0 e sem indice; o sistema pode
+   tratar isso como banco invalido. */
+static void ensure_savedata_schema(sqlite3 *db)
+{
+  sqlite3_stmt *st = NULL;
+  int user_version = -1;
+
+  sqlite3_exec(db,
+    "CREATE INDEX IF NOT EXISTS savedata_index on savedata"
+    "(title_id, dir_name, user_param, size_kib, mtime, game_title_id)",
+    NULL, NULL, NULL);
+  if (sqlite3_prepare_v2(db, "PRAGMA user_version", -1, &st, NULL) == SQLITE_OK &&
+      sqlite3_step(st) == SQLITE_ROW)
+    user_version = sqlite3_column_int(st, 0);
+  if (st != NULL)
+    sqlite3_finalize(st);
+  if (user_version == 0)
+  {
+    sqlite3_exec(db, "PRAGMA user_version=7", NULL, NULL, NULL);
+    logf("savedata.db user_version ajustado para 7");
+  }
+}
+
+static int update_savedata_db(const char *source_user, const char *dest_user,
+  const char *title, const char *save, const SfoMeta *meta)
+{
+  int image_blocks = 0;
+  char db_main[256];
+  char db_sub[256];
+  char db_detail[1024];
+  char db_game[64];
   char src_db_path[MAX_PATH_LEN];
   char dst_db_path[MAX_PATH_LEN];
   char dst_db_dir[MAX_PATH_LEN];
@@ -1225,6 +1394,24 @@ static int update_savedata_db(const char *source_user, const char *dest_user,
   int exists = 0;
   int ret;
 
+  /* A cross-console import cannot read source_user's savedata.db: that
+     database exists on the other PS4.  Start with values derived from the
+     destination image instead of silently using the old 96-block fallback. */
+  {
+    char image_path[MAX_PATH_LEN];
+    uint64_t image_size = 0;
+    snprintf(image_path, sizeof(image_path),
+      "/user/home/%s/savedata/%s/sdimg_%s", dest_user, title, save);
+    if (path_size(image_path, &image_size) == 0 && image_size >= 32768)
+    {
+      blocks = (int)(image_size / 32768);
+      image_blocks = blocks;
+      /* Death Stranding uses a 390-block container with 92 free blocks. */
+      free_blocks = (blocks == 390) ? 92 : 0;
+      size_kib = blocks * 32;
+    }
+  }
+
   snprintf(src_db_path, sizeof(src_db_path),
     "/system_data/savedata/%s/db/user/savedata.db", source_user);
   snprintf(dst_db_path, sizeof(dst_db_path),
@@ -1244,18 +1431,24 @@ static int update_savedata_db(const char *source_user, const char *dest_user,
         sqlite3_prepare_v2(src_db, sql, -1, &stmt, NULL) == SQLITE_OK &&
         sqlite3_step(stmt) == SQLITE_ROW)
     {
-      main_title = (const char *)sqlite3_column_text(stmt, 0);
-      sub_title = (const char *)sqlite3_column_text(stmt, 1);
-      detail = (const char *)sqlite3_column_text(stmt, 2);
+      /* Copiar: os ponteiros do sqlite3 deixam de valer apos finalize. */
+      const char *t;
+      t = (const char *)sqlite3_column_text(stmt, 0);
+      snprintf(db_main, sizeof(db_main), "%s", t ? t : "");
+      t = (const char *)sqlite3_column_text(stmt, 1);
+      snprintf(db_sub, sizeof(db_sub), "%s", t ? t : "");
+      t = (const char *)sqlite3_column_text(stmt, 2);
+      snprintf(db_detail, sizeof(db_detail), "%s", t ? t : "");
+      t = (const char *)sqlite3_column_text(stmt, 7);
+      snprintf(db_game, sizeof(db_game), "%s", (t && t[0]) ? t : title);
+      main_title = db_main;
+      sub_title = db_sub;
+      detail = db_detail;
+      game_title_id = db_game;
       user_param = sqlite3_column_int(stmt, 3);
       blocks = sqlite3_column_int(stmt, 4);
       free_blocks = sqlite3_column_int(stmt, 5);
       size_kib = sqlite3_column_int(stmt, 6);
-      game_title_id = (const char *)sqlite3_column_text(stmt, 7);
-      if (main_title == NULL) main_title = "";
-      if (sub_title == NULL) sub_title = "";
-      if (detail == NULL) detail = "";
-      if (game_title_id == NULL || game_title_id[0] == 0) game_title_id = title;
     }
     if (stmt != NULL)
     {
@@ -1272,6 +1465,28 @@ static int update_savedata_db(const char *source_user, const char *dest_user,
   else if (src_db != NULL)
     sqlite3_close(src_db);
 
+  /* O banco de origem pode ser de outro usuario do mesmo console; a imagem
+     realmente gravada e a fonte confiavel para o tamanho. */
+  if (image_blocks > 0 && blocks != image_blocks)
+  {
+    blocks = image_blocks;
+    size_kib = blocks * 32;
+    free_blocks = (blocks == 390) ? 92 : 0;
+  }
+
+  /* Valores do param.sfo do save importado tem prioridade sobre o banco. */
+  if (meta != NULL && meta->valid)
+  {
+    if (meta->main_title[0] != 0)
+      main_title = meta->main_title;
+    if (meta->sub_title[0] != 0)
+      sub_title = meta->sub_title;
+    if (meta->detail[0] != 0)
+      detail = meta->detail;
+    if (meta->has_user_param)
+      user_param = meta->user_param;
+  }
+
   get_account_id_for_user(dest_user, &account_id);
   user_id = (uint32_t)strtoul(dest_user, NULL, 16);
 
@@ -1283,6 +1498,8 @@ static int update_savedata_db(const char *source_user, const char *dest_user,
     return -1;
   }
 
+  /* Como o Apollo: sem journal, para nao deixar savedata.db-journal ao lado. */
+  sqlite3_exec(dst_db, "PRAGMA journal_mode=OFF", NULL, 0, NULL);
   sqlite3_exec(dst_db,
     "CREATE TABLE IF NOT EXISTS savedata ("
     "id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,"
@@ -1298,6 +1515,7 @@ static int update_savedata_db(const char *source_user, const char *dest_user,
     sqlite3_free(err);
     err = NULL;
   }
+  ensure_savedata_schema(dst_db);
 
   sql = sqlite3_mprintf(
     "SELECT COUNT(*) FROM savedata WHERE title_id=%Q AND dir_name=%Q",
@@ -1357,9 +1575,34 @@ static int update_savedata_db(const char *source_user, const char *dest_user,
   }
 
   sqlite3_free(sql);
+  sql = sqlite3_mprintf(
+    "SELECT main_title, blocks, size_kib, account_id, user_id FROM savedata "
+    "WHERE title_id=%Q AND dir_name=%Q", title, save);
+  if (sql != NULL &&
+      sqlite3_prepare_v2(dst_db, sql, -1, &stmt, NULL) == SQLITE_OK &&
+      sqlite3_step(stmt) == SQLITE_ROW)
+  {
+    const char *t = (const char *)sqlite3_column_text(stmt, 0);
+    logf("savedata.db readback main='%s' blocks=%d size_kib=%d aid=%llx uid=%x",
+      t ? t : "", sqlite3_column_int(stmt, 1), sqlite3_column_int(stmt, 2),
+      (unsigned long long)sqlite3_column_int64(stmt, 3),
+      (unsigned)sqlite3_column_int64(stmt, 4));
+  }
+  else
+  {
+    logf("savedata.db readback FAILED for %s/%s", title, save);
+    ret = -4;
+  }
+  if (stmt != NULL)
+    sqlite3_finalize(stmt);
+  if (sql != NULL)
+    sqlite3_free(sql);
   sqlite3_close(dst_db);
-  logf("savedata.db %s for %s/%s user %s", exists ? "updated" : "inserted",
-    title, save, dest_user);
+  if (ret == -4)
+    return -4;
+  logf("savedata.db %s for %s/%s user %s blocks=%d free=%d size_kib=%d",
+    exists ? "updated" : "inserted",
+    title, save, dest_user, blocks, free_blocks, size_kib);
   return 0;
 }
 
@@ -1371,6 +1614,44 @@ static int is_safe_token(const char *s)
     if (!isalnum((unsigned char)*s) && *s != '_' && *s != '-' && *s != '.')
       return 0;
   return 1;
+}
+
+static int rebuild_savedata_meta(const char *mount_path, const char *user,
+  const char *title, const char *save)
+{
+  char meta_dir[MAX_PATH_LEN];
+  char src[MAX_PATH_LEN];
+  char dst[MAX_PATH_LEN];
+  int ret;
+
+  snprintf(meta_dir, sizeof(meta_dir),
+    "/user/home/%s/savedata_meta/user/%s", user, title);
+  if (mkdirs(meta_dir) != 0 && errno != EEXIST)
+  {
+    logf("savedata_meta mkdir failed %s errno=%d", meta_dir, errno);
+    return -1;
+  }
+
+  snprintf(src, sizeof(src), "%s/sce_sys/param.sfo", mount_path);
+  snprintf(dst, sizeof(dst), "%s/sce_bu_%s.sfo", meta_dir, save);
+  if (!file_exists(src) || (ret = copy_file(src, dst)) != 0)
+    return -2;
+  /* Alem do sce_bu_<save>.sfo, o par <save>.sfo tambem pertence ao meta. */
+  snprintf(dst, sizeof(dst), "%s/%s.sfo", meta_dir, save);
+  if (copy_file(src, dst) != 0)
+    return -5;
+
+  snprintf(src, sizeof(src), "%s/sce_sys/icon0.png", mount_path);
+  if (file_exists(src))
+  {
+    snprintf(dst, sizeof(dst), "%s/%s_icon0.png", meta_dir, save);
+    if (copy_file(src, dst) != 0)
+      return -3;
+    snprintf(dst, sizeof(dst), "%s/sce_bu_%s_icon0.png", meta_dir, save);
+    if (copy_file(src, dst) != 0)
+      return -4;
+  }
+  return 0;
 }
 
 static void url_decode(char *s)
@@ -1518,6 +1799,7 @@ static int export_decrypted_send(const char *url, int fd)
   char work_bin[MAX_PATH_LEN];
   char mnt_src[MAX_PATH_LEN];
   char archive_path[MAX_PATH_LEN];
+  uint64_t src_size;
   FILE *archive;
   int ret;
 
@@ -1547,6 +1829,8 @@ static int export_decrypted_send(const char *url, int fd)
   snprintf(work_img, sizeof(work_img), "%s/sdimg_%s", work_dir, save);
   snprintf(work_bin, sizeof(work_bin), "%s/%s.bin", work_dir, save);
   snprintf(archive_path, sizeof(archive_path), "%s/save.ps4sav", work_dir);
+  if (path_size(src_img, &src_size) != 0)
+    src_size = 0;
 
   logf("export begin %s/%s user %s", title, save, user);
   if (!file_exists(src_img) || !file_exists(src_bin))
@@ -1588,6 +1872,7 @@ static int export_decrypted_send(const char *url, int fd)
     return 500;
   }
   fprintf(archive, "PS4SAVEPACK1\n");
+  fprintf(archive, "I\t%llu\n", (unsigned long long)src_size);
   ret = pack_dir_recursive(archive, mnt_src, "");
   fprintf(archive, "END\n");
   fclose(archive);
@@ -1625,8 +1910,11 @@ static int import_decrypted_from_archive(const char *url, const char *archive_pa
   char mnt_dst[MAX_PATH_LEN];
   uint64_t archive_size;
   int use_existing_dest;
+  uint64_t source_image_size = 0;
+  SfoMeta sfo_meta;
   int ret;
 
+  memset(&sfo_meta, 0, sizeof(sfo_meta));
   memset(dest_user, 0, sizeof(dest_user));
   memset(source_user, 0, sizeof(source_user));
   memset(title, 0, sizeof(title));
@@ -1639,8 +1927,7 @@ static int import_decrypted_from_archive(const char *url, const char *archive_pa
     snprintf(result, result_size, "missing query parameter\n");
     return 400;
   }
-  if (!query_value(url, "source_user", source_user, sizeof(source_user)))
-    query_value(url, "Left_user", source_user, sizeof(source_user));
+  query_value(url, "source_user", source_user, sizeof(source_user));
   if (source_user[0] == 0)
     snprintf(source_user, sizeof(source_user), "%s", dest_user);
 
@@ -1666,6 +1953,18 @@ static int import_decrypted_from_archive(const char *url, const char *archive_pa
 
   if (path_size(archive_path, &archive_size) != 0)
     archive_size = 32 * 1024 * 1024;
+  {
+    FILE *header_file = fopen(archive_path, "rb");
+    char header[128];
+    if (header_file != NULL)
+    {
+      fgets(header, sizeof(header), header_file);
+      if (fgets(header, sizeof(header), header_file) != NULL &&
+          header[0] == 'I' && header[1] == '\t')
+        source_image_size = strtoull(header + 2, NULL, 10);
+      fclose(header_file);
+    }
+  }
   use_existing_dest = file_exists(dst_img) && file_exists(dst_bin);
   logf("import begin %s/%s user %s existing=%d",
     title, save, dest_user, use_existing_dest);
@@ -1683,7 +1982,9 @@ static int import_decrypted_from_archive(const char *url, const char *archive_pa
   }
   else
   {
-    ret = create_pfs_image(work_dst_img, work_dst_bin, archive_size + (8 * 1024 * 1024));
+    if (source_image_size < 32768)
+      source_image_size = archive_size + (8 * 1024 * 1024);
+    ret = create_pfs_image(work_dst_img, work_dst_bin, source_image_size);
     if (ret < 0)
     {
       snprintf(result, result_size, "create destination pfs failed: 0x%x\n", ret);
@@ -1721,6 +2022,10 @@ static int import_decrypted_from_archive(const char *url, const char *archive_pa
     rmdir(work_dir);
     return 500;
   }
+  read_sfo_meta(mnt_dst, &sfo_meta);
+  ret = rebuild_savedata_meta(mnt_dst, dest_user, title, save);
+  if (ret != 0)
+    logf("savedata_meta rebuild returned %d for %s/%s", ret, title, save);
   sync();
   unmount_save(mnt_dst);
 
@@ -1736,12 +2041,23 @@ static int import_decrypted_from_archive(const char *url, const char *archive_pa
 
   chmod(dst_img, 0644);
   chmod(dst_bin, 0644);
-  ret = update_savedata_db(source_user, dest_user, title, save);
+  {
+    char backup_img[MAX_PATH_LEN];
+    char backup_bin[MAX_PATH_LEN];
+    snprintf(backup_img, sizeof(backup_img), "%s/sdimg_sce_bu_%s", dst_dir, save);
+    snprintf(backup_bin, sizeof(backup_bin), "%s/sce_bu_%s.bin", dst_dir, save);
+    copy_file(dst_img, backup_img);
+    copy_file(dst_bin, backup_bin);
+  }
+  ret = update_savedata_db(source_user, dest_user, title, save, &sfo_meta);
   sync();
 
   logf("import complete %s/%s user %s db=%d", title, save, dest_user, ret);
   snprintf(result, result_size, "ok\ndestination=%s\ndb_update=%d\n", dst_img, ret);
-  logf("work files kept for stability: %s", work_dir);
+  /* As copias de trabalho (imagens de ate 32 MB cada) nunca eram apagadas e
+     chegaram a 8 GB em /data. Tudo ja foi copiado e desmontado acima. */
+  delete_recursive(work_dir);
+  rmdir(work_dir);
   return 200;
 }
 
@@ -1763,13 +2079,10 @@ static int import_decrypted_child(const char *url, const char *request,
     return 500;
   }
 
-  /*
-   * Execute the import in this process.  The previous fork/result-file
-   * protocol could report wait_status=0 even when the child never produced
-   * its result file, hiding the actual import error from the client.
-   */
+  logf("import direct begin url=%s archive=%s", url, archive_path);
   ret = import_decrypted_from_archive(url, archive_path, result, result_size);
   unlink(archive_path);
+  logf("import direct finished ret=%d detail=%s", ret, result);
   return ret;
 }
 
@@ -1794,20 +2107,17 @@ static int sync_decrypted(const char *url, char *result, size_t result_size)
   char mnt_dst[MAX_PATH_LEN];
   uint64_t src_size;
   int use_existing_dest;
+  SfoMeta sfo_meta;
   int ret;
 
+  memset(&sfo_meta, 0, sizeof(sfo_meta));
   memset(source_user, 0, sizeof(source_user));
   memset(dest_user, 0, sizeof(dest_user));
   memset(title, 0, sizeof(title));
   memset(save, 0, sizeof(save));
 
-  if (!query_value(url, "source_user", source_user, sizeof(source_user)) &&
-      !query_value(url, "Left_user", source_user, sizeof(source_user)))
-  {
-    snprintf(result, result_size, "missing query parameter\n");
-    return 400;
-  }
-  if (!query_value(url, "dest_user", dest_user, sizeof(dest_user)) ||
+  if (!query_value(url, "source_user", source_user, sizeof(source_user)) ||
+      !query_value(url, "dest_user", dest_user, sizeof(dest_user)) ||
       !query_value(url, "title", title, sizeof(title)) ||
       !query_value(url, "save", save, sizeof(save)))
   {
@@ -1957,6 +2267,10 @@ static int sync_decrypted(const char *url, char *result, size_t result_size)
     rmdir(work_dir);
     return 500;
   }
+  read_sfo_meta(mnt_dst, &sfo_meta);
+  ret = rebuild_savedata_meta(mnt_dst, dest_user, title, save);
+  if (ret != 0)
+    logf("savedata_meta rebuild returned %d for %s/%s", ret, title, save);
   sync();
   unmount_save(mnt_dst);
   unmount_save(mnt_src);
@@ -1982,7 +2296,7 @@ static int sync_decrypted(const char *url, char *result, size_t result_size)
 
   chmod(dst_img, 0644);
   chmod(dst_bin, 0644);
-  ret = update_savedata_db(source_user, dest_user, title, save);
+  ret = update_savedata_db(source_user, dest_user, title, save, &sfo_meta);
   if (ret != 0)
     logf("savedata.db update returned %d", ret);
   sync();
@@ -1991,8 +2305,132 @@ static int sync_decrypted(const char *url, char *result, size_t result_size)
   snprintf(result, result_size,
     "ok\nsource=%s\ndestination=%s\ndb_update=%d\n", src_img, dst_img, ret);
 
-  logf("work files kept for stability: %s", work_dir);
+  delete_recursive(work_dir);
+  rmdir(work_dir);
   return 200;
+}
+
+/* Remove TODOS os arquivos de um save: imagem e chave, copias sce_bu_ e os
+   metadados em savedata_meta. Deixar qualquer um deles faz o jogo mostrar
+   "os dados salvos estao corrompidos". Devolve quantos arquivos existiam. */
+static int remove_save_files(const char *user, const char *title, const char *save)
+{
+  char dir[MAX_PATH_LEN];
+  char meta[MAX_PATH_LEN];
+  char path[MAX_PATH_LEN];
+  int removed = 0;
+  size_t i;
+  const char *data_fmt[] = {
+    "%s/sdimg_%s", "%s/%s.bin", "%s/sdimg_sce_bu_%s", "%s/sce_bu_%s.bin"
+  };
+  const char *meta_fmt[] = {
+    "%s/%s.sfo", "%s/sce_bu_%s.sfo", "%s/%s_icon0.png", "%s/sce_bu_%s_icon0.png"
+  };
+
+  snprintf(dir, sizeof(dir), "/user/home/%s/savedata/%s", user, title);
+  snprintf(meta, sizeof(meta), "/user/home/%s/savedata_meta/user/%s", user, title);
+
+  for (i = 0; i < sizeof(data_fmt) / sizeof(data_fmt[0]); i++)
+  {
+    snprintf(path, sizeof(path), data_fmt[i], dir, save);
+    if (unlink(path) == 0)
+      removed++;
+  }
+  for (i = 0; i < sizeof(meta_fmt) / sizeof(meta_fmt[0]); i++)
+  {
+    snprintf(path, sizeof(path), meta_fmt[i], meta, save);
+    if (unlink(path) == 0)
+      removed++;
+  }
+  rmdir(meta);
+  rmdir(dir);
+  return removed;
+}
+
+#define ORPHAN_MAX 128
+
+/* Procura saves sem imagem principal (sdimg_<save>) mas com restos: copias
+   sce_bu_ em savedata ou .sfo em savedata_meta. Remove os restos. */
+static int cleanup_orphan_files(const char *user)
+{
+  char root[MAX_PATH_LEN];
+  char titles[ORPHAN_MAX][32];
+  int title_count = 0;
+  int removed = 0;
+  DIR *d;
+  struct dirent *ent;
+  int t;
+
+  snprintf(root, sizeof(root), "/user/home/%s/savedata", user);
+  d = opendir(root);
+  if (!d)
+    return 0;
+  while ((ent = readdir(d)) != NULL && title_count < ORPHAN_MAX)
+  {
+    if (ent->d_name[0] == '.' || strcmp(ent->d_name, "sce_backup") == 0 ||
+        strlen(ent->d_name) >= sizeof(titles[0]) || !is_safe_token(ent->d_name))
+      continue;
+    snprintf(titles[title_count++], sizeof(titles[0]), "%s", ent->d_name);
+  }
+  closedir(d);
+
+  for (t = 0; t < title_count; t++)
+  {
+    char saves[ORPHAN_MAX][96];
+    int save_count = 0;
+    char dir[MAX_PATH_LEN];
+    char meta[MAX_PATH_LEN];
+    int pass;
+    int s;
+
+    snprintf(dir, sizeof(dir), "%s/%s", root, titles[t]);
+    snprintf(meta, sizeof(meta), "/user/home/%s/savedata_meta/user/%s",
+      user, titles[t]);
+
+    for (pass = 0; pass < 2; pass++)
+    {
+      d = opendir(pass == 0 ? dir : meta);
+      if (!d)
+        continue;
+      while ((ent = readdir(d)) != NULL && save_count < ORPHAN_MAX)
+      {
+        const char *n = ent->d_name;
+        char name[96];
+        size_t len;
+
+        if (pass == 0 && strncmp(n, "sdimg_sce_bu_", 13) == 0)
+          snprintf(name, sizeof(name), "%s", n + 13);
+        else if (pass == 1 && (len = strlen(n)) > 4 &&
+                 strcmp(n + len - 4, ".sfo") == 0)
+        {
+          snprintf(name, sizeof(name), "%.*s", (int)(len - 4), n);
+          if (strncmp(name, "sce_bu_", 7) == 0)
+            memmove(name, name + 7, strlen(name + 7) + 1);
+        }
+        else
+          continue;
+        if (name[0] == 0 || !is_safe_token(name))
+          continue;
+        snprintf(saves[save_count++], sizeof(saves[0]), "%s", name);
+      }
+      closedir(d);
+    }
+
+    for (s = 0; s < save_count; s++)
+    {
+      char img[MAX_PATH_LEN];
+
+      snprintf(img, sizeof(img), "%s/sdimg_%s", dir, saves[s]);
+      if (access(img, F_OK) == 0)
+        continue;
+      if (remove_save_files(user, titles[t], saves[s]) > 0)
+      {
+        removed++;
+        logf("orphan save files removed: %s/%s user %s", titles[t], saves[s], user);
+      }
+    }
+  }
+  return removed;
 }
 
 static int delete_save_entry(const char *url, char *result, size_t result_size)
@@ -2035,8 +2473,10 @@ static int delete_save_entry(const char *url, char *result, size_t result_size)
     "/system_data/savedata/%s/db/user/savedata.db", user);
 
   logf("delete begin %s/%s user %s", title, save, user);
-  unlink(img_path);
-  unlink(bin_path);
+  (void)img_path;
+  (void)bin_path;
+  logf("delete removed %d file(s) of %s/%s",
+    remove_save_files(user, title, save), title, save);
 
   ret = sqlite3_open(db_path, &db);
   if (ret == SQLITE_OK)
@@ -2102,6 +2542,7 @@ static int cleanup_stale_save_entries(const char *url, char *result, size_t resu
     return 500;
   }
 
+  ensure_savedata_schema(db);
   ret = sqlite3_prepare_v2(db,
     "SELECT title_id, dir_name FROM savedata", -1, &stmt, NULL);
   if (ret != SQLITE_OK)
@@ -2155,9 +2596,108 @@ static int cleanup_stale_save_entries(const char *url, char *result, size_t resu
   }
 
   sqlite3_close(db);
+  for (i = 0; i < count; i++)
+    remove_save_files(user, titles[i], saves[i]);
+  i = cleanup_orphan_files(user);
   sync();
-  snprintf(result, result_size, "ok\nremoved=%d\n", count);
+  snprintf(result, result_size, "ok\nremoved=%d\norphans=%d\n", count, i);
   return 200;
+}
+
+static unsigned long long path_total_size(const char *path)
+{
+  struct stat st;
+  unsigned long long total;
+  DIR *d;
+  struct dirent *ent;
+
+  if (stat(path, &st) != 0)
+    return 0;
+  if (!S_ISDIR(st.st_mode))
+    return (unsigned long long)st.st_size;
+
+  total = 0;
+  d = opendir(path);
+  if (!d)
+    return 0;
+  while ((ent = readdir(d)) != NULL)
+  {
+    char fp[MAX_PATH_LEN];
+
+    if (strcmp(ent->d_name, ".") == 0 || strcmp(ent->d_name, "..") == 0)
+      continue;
+    snprintf(fp, sizeof(fp), "%s/%s", path, ent->d_name);
+    total += path_total_size(fp);
+  }
+  closedir(d);
+  return total;
+}
+
+/* Lista o que o agent guarda em WORK_ROOT (copias de trabalho dos imports). */
+static void send_work_list(int fd)
+{
+  char out[4096];
+  size_t used = 0;
+  unsigned long long total = 0;
+  unsigned long count = 0;
+  DIR *d;
+  struct dirent *ent;
+
+  out[0] = 0;
+  d = opendir(WORK_ROOT);
+  if (d)
+  {
+    while ((ent = readdir(d)) != NULL)
+    {
+      char fp[MAX_PATH_LEN];
+      unsigned long long size;
+
+      if (strcmp(ent->d_name, ".") == 0 || strcmp(ent->d_name, "..") == 0)
+        continue;
+      snprintf(fp, sizeof(fp), "%s/%s", WORK_ROOT, ent->d_name);
+      size = path_total_size(fp);
+      total += size;
+      count++;
+      if (used < sizeof(out) - 128)
+        used += (size_t)snprintf(out + used, sizeof(out) - used, "%s  %llu KB\n",
+          ent->d_name, size / 1024);
+    }
+    closedir(d);
+  }
+  {
+    struct statfs sf;
+    unsigned long long free_mb = 0;
+
+    if (statfs("/data", &sf) == 0)
+      free_mb = (unsigned long long)sf.f_bavail * (unsigned long long)sf.f_bsize /
+        (1024ULL * 1024ULL);
+    snprintf(out + used, sizeof(out) - used,
+      "\n%lu item(ns), total %llu MB em %s\nlivre em /data: %llu MB\n",
+      count, total / (1024 * 1024), WORK_ROOT, free_mb);
+  }
+  send_response(fd, 200, "OK", "text/plain; charset=utf-8", out);
+}
+
+/* Apaga apenas as copias de trabalho do agent; nunca toca em savedata. */
+static void clean_work_dirs(int fd)
+{
+  char out[256];
+  unsigned long long before = path_total_size(WORK_ROOT);
+
+  delete_recursive(WORK_ROOT);
+  logf("work dir limpo: %llu MB liberados", before / (1024 * 1024));
+  snprintf(out, sizeof(out), "ok\nliberado=%llu MB\n", before / (1024 * 1024));
+  send_response(fd, 200, "OK", "text/plain; charset=utf-8", out);
+}
+
+static void clear_log(int fd)
+{
+  FILE *fp = fopen(SAVE_AGENT_LOG, "w");
+
+  if (fp)
+    fclose(fp);
+  logf("log limpo pelo usuario");
+  send_response(fd, 200, "OK", "text/plain; charset=utf-8", "ok\nlog limpo\n");
 }
 
 static void send_log(int fd)
@@ -2196,7 +2736,7 @@ static void send_log(int fd)
   fread(buf, 1, (size_t)size, fp);
   buf[size] = 0;
   fclose(fp);
-  send_response(fd, 200, "OK", "text/plain", buf);
+  send_response(fd, 200, "OK", "text/plain; charset=utf-8", buf);
   free(buf);
 }
 
@@ -2281,37 +2821,17 @@ static void handle_client(int fd)
   char url[1024];
   char result[2048];
   ssize_t bytes_read;
-  struct timeval client_timeout;
-  int keepalive;
 
   memset(request, 0, sizeof(request));
-  client_timeout.tv_sec = 120;
-  client_timeout.tv_usec = 0;
-  setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &client_timeout,
-    sizeof(client_timeout));
-  setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &client_timeout,
-    sizeof(client_timeout));
-  keepalive = 1;
-  setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &keepalive, sizeof(keepalive));
-
-  bytes_read = 0;
-  while (bytes_read < (ssize_t)(sizeof(request) - 1))
-  {
-    ssize_t n = read(fd, request + bytes_read,
-      sizeof(request) - 1 - (size_t)bytes_read);
-    if (n <= 0)
-      break;
-    bytes_read += n;
-    request[bytes_read] = 0;
-    if (strstr(request, "\r\n\r\n") != NULL)
-      break;
-  }
+  bytes_read = read(fd, request, sizeof(request) - 1);
   if (bytes_read <= 0)
     return;
 
   memset(method, 0, sizeof(method));
   memset(url, 0, sizeof(url));
   sscanf(request, "%7s %1023s", method, url);
+  if (strncmp(url, "/api/ping", 9) != 0)
+    logf("request %s %.80s", method, url);
 
   if (strcmp(method, "GET") == 0 && strncmp(url, "/api/ping", 9) == 0)
   {
@@ -2332,6 +2852,24 @@ static void handle_client(int fd)
   if (strcmp(method, "GET") == 0 && strncmp(url, "/api/log", 8) == 0)
   {
     send_log(fd);
+    return;
+  }
+
+  if (strcmp(method, "GET") == 0 && strncmp(url, "/api/clear_log", 14) == 0)
+  {
+    clear_log(fd);
+    return;
+  }
+
+  if (strcmp(method, "GET") == 0 && strncmp(url, "/api/work_list", 14) == 0)
+  {
+    send_work_list(fd);
+    return;
+  }
+
+  if (strcmp(method, "GET") == 0 && strncmp(url, "/api/clean_work", 15) == 0)
+  {
+    clean_work_dirs(fd);
     return;
   }
 
@@ -2365,6 +2903,21 @@ static void handle_client(int fd)
   {
     send_response(fd, 200, "OK", "text/plain", "bye\n");
     g_stop = 1;
+    if (g_server_fd >= 0)
+    {
+      shutdown(g_server_fd, SHUT_RDWR);
+      close(g_server_fd);
+      g_server_fd = -1;
+    }
+    return;
+  }
+
+  if (strcmp(method, "GET") == 0 && strncmp(url, "/api/reboot", 11) == 0)
+  {
+    send_response(fd, 200, "OK", "text/plain", "rebooting\n");
+    g_stop = 1;
+    sync();
+    syscall(SYS_reboot, RB_AUTOBOOT);
     return;
   }
 
@@ -2431,8 +2984,41 @@ static void handle_client(int fd)
 
   if (strcmp(method, "GET") == 0 && strcmp(url, "/") == 0)
   {
-    send_response(fd, 200, "OK", "text/plain",
-      SAVE_AGENT_VERSION "\nUse /api/ping\n");
+    send_response(fd, 200, "OK", "text/html; charset=utf-8",
+      "<!doctype html><html><head><meta charset=\"utf-8\">"
+      "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">"
+      "<title>PS4 Save Agent</title>"
+      "<style>body{font-family:sans-serif;background:#181a1b;color:#e8e6e3;margin:16px}"
+      "a{color:#3391ff}h1{margin:0 0 12px}h2{margin:18px 0 6px;font-size:16px;color:#9aa0a6}"
+      "li{margin:6px 0}small{color:#9aa0a6}form{margin:6px 0}"
+      "input{background:#25282a;color:#e8e6e3;border:1px solid #444;padding:3px 6px}"
+      "button{padding:3px 10px}</style></head>"
+      "<body><h1>" SAVE_AGENT_VERSION "</h1>"
+      "<h2>Estado</h2><ul>"
+      "<li><a href=\"/api/ping\">Ping</a> <small>responde o nome e a versao</small></li>"
+      "<li><a href=\"/api/version\">Versao e rotas</a></li>"
+      "</ul>"
+      "<h2>Log</h2><ul>"
+      "<li><a href=\"/api/log\">Ver log</a> <small>ultimos 32 KB</small></li>"
+      "<li><a href=\"/api/clear_log\" onclick=\"return confirm('Limpar o log do agent?')\">Limpar log</a></li>"
+      "</ul>"
+      "<h2>Arquivos de trabalho</h2><ul>"
+      "<li><a href=\"/api/work_list\">Listar copias de trabalho</a> <small>tamanho em /data/ps4-save-agent</small></li>"
+      "<li><a href=\"/api/clean_work\" onclick=\"return confirm('Apagar as copias de trabalho dos imports? Os saves nao sao afetados.')\">Limpar copias de trabalho</a></li>"
+      "</ul>"
+      "<h2>Usuario</h2>"
+      "<form action=\"/api/account_id\" method=\"get\">Account ID do usuario "
+      "<input name=\"user\" placeholder=\"ex.: 11e3daed\" size=\"12\"> <button>Consultar</button></form>"
+      "<h2>Exportar save descriptografado</h2>"
+      "<form action=\"/api/export_decrypted\" method=\"get\">"
+      "<input name=\"user\" placeholder=\"usuario\" size=\"10\"> "
+      "<input name=\"title\" placeholder=\"CUSA00000\" size=\"10\"> "
+      "<input name=\"save\" placeholder=\"MANUALSAVE0\" size=\"14\"> "
+      "<button>Baixar</button></form>"
+      "<h2>Controle</h2><ul>"
+      "<li><a href=\"/api/shutdown\">Shutdown payload</a> <small>encerra so o agent</small></li>"
+      "<li><a href=\"/api/reboot\" onclick=\"return confirm('Reiniciar o PS4 agora? Jogos e payloads serao encerrados.')\">Reiniciar PS4</a></li>"
+      "</ul></body></html>\n");
     return;
   }
 
@@ -2448,13 +3034,11 @@ int main(int argc, char **argv)
   (void)argc;
   (void)argv;
 
-  signal(SIGTERM, request_stop);
-  signal(SIGINT, request_stop);
-
   setvbuf(stdout, NULL, _IONBF, 0);
+  signal(SIGPIPE, SIG_IGN);
+  install_fatal_handlers();
   elevate();
   mkdirs(WORK_ROOT);
-  g_log_fp = fopen(SAVE_AGENT_LOG, "a");
   logf("%s starting on port %d", SAVE_AGENT_VERSION, SAVE_AGENT_PORT);
 
   sceNetInit();
@@ -2465,22 +3049,10 @@ int main(int argc, char **argv)
     logf("socket failed: %s", strerror(errno));
     return 1;
   }
+  g_server_fd = server_fd;
 
   one = 1;
   setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &one, sizeof(one));
-
-  /*
-   * Do not leave the main thread blocked forever in accept().  Apart from
-   * making /api/shutdown deterministic, this gives the process a bounded
-   * opportunity to observe termination during the PS4 power-off sequence.
-   */
-  {
-    struct timeval accept_timeout;
-    accept_timeout.tv_sec = 1;
-    accept_timeout.tv_usec = 0;
-    setsockopt(server_fd, SOL_SOCKET, SO_RCVTIMEO,
-      &accept_timeout, sizeof(accept_timeout));
-  }
 
   memset(&server_addr, 0, sizeof(server_addr));
   server_addr.sin_family = AF_INET;
@@ -2500,6 +3072,16 @@ int main(int argc, char **argv)
   }
 
   logf("%s listening on 0.0.0.0:%d", SAVE_AGENT_VERSION, SAVE_AGENT_PORT);
+  /* So aqui (depois do bind) para uma segunda instancia que falhou no bind
+     nao apagar os arquivos do agent que ja esta rodando. */
+  {
+    unsigned long long stale = path_total_size(WORK_ROOT);
+    if (stale > 0)
+    {
+      delete_recursive(WORK_ROOT);
+      logf("work dir antigo limpo: %llu MB", stale / (1024 * 1024));
+    }
+  }
 
   while (!g_stop)
   {
@@ -2510,11 +3092,7 @@ int main(int argc, char **argv)
     client_len = sizeof(client_addr);
     client_fd = accept(server_fd, (struct sockaddr *)&client_addr, &client_len);
     if (client_fd < 0)
-    {
-      if (errno == EINTR || errno == EAGAIN || errno == EWOULDBLOCK)
-        continue;
       continue;
-    }
 
     handle_client(client_fd);
     close(client_fd);
@@ -2522,10 +3100,5 @@ int main(int argc, char **argv)
 
   close(server_fd);
   logf("%s stopped", SAVE_AGENT_VERSION);
-  if (g_log_fp != NULL)
-  {
-    fclose(g_log_fp);
-    g_log_fp = NULL;
-  }
   return 0;
 }

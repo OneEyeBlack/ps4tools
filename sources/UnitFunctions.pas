@@ -67,7 +67,7 @@ procedure DownloadDecryptedSave(const AHost: string; const ASave: TPS4SaveGame;
 
 procedure ExportPS4SavesDecrypted(const AHost: string; APort: Word;
   const ASaves: TArray<TPS4SaveGame>; const ADestFolder: string;
-  ALog: TPS4SaveAgentLogEvent);
+  ALog: TPS4SaveAgentLogEvent; AProgress: TPS4SaveAgentProgressEvent);
 
 function PS4SaveAgentLocalPath: string;
 function PS4SaveAgentRemotePath: string;
@@ -91,13 +91,36 @@ procedure SyncPS4SavesOnConsole(const AHost: string;
   const ALeftUserID, ADestUserID: string; const ASaves: TArray<TPS4SaveGame>;
   ALog: TPS4SaveAgentLogEvent);
 
+{ Remocao de fundo por IA. Gera um PNG com canal alfa; a imagem original nunca
+  e alterada. Usa o rembg local (offline) e, so se ele nao estiver instalado e
+  houver uma chave configurada, a API remove.bg. }
+{ bmFigure: logos/ilustracoes (fundo plano -> IA). bmHumanFace: foto de rosto
+  humano (modelo de pessoas + refino da mascara). }
+type
+  TBgMode = (bmFigure, bmHumanFace);
+
+function RemoveImageBackground(const AInputFile, AOutputFile: string;
+  AMode: TBgMode; out AErrorMessage: string): Boolean; overload;
+function RemoveImageBackground(const AInputFile, AOutputFile: string;
+  out AErrorMessage: string): Boolean; overload;
+function RemoveImageBackground(const AInputFile, AOutputFile: string): Boolean; overload;
+function RemoveImageBackgroundBatch(const AInputFiles: TArray<string>;
+  const AOutputDir: string; ALog: TPS4SaveLogEvent): Integer;
+function PngFileHasTransparency(const AFileName: string): Boolean;
+function PngTransparencyShare(const AFileName: string): Double;
+
 implementation
 
 uses
-  System.NetEncoding,
+  System.NetEncoding, System.IniFiles,
+  System.Net.URLClient, System.Net.HttpClient, System.Net.Mime,
+  Vcl.Forms, Vcl.Imaging.pngimage, Vcl.Imaging.jpeg,
   System.StrUtils, System.Sqlite, Winapi.Windows,
   IdComponent, IdException, IdExceptionCore, IdGlobal, IdHTTP,
-  IdMultipartFormData, IdURI, IdStack;
+  IdMultipartFormData, IdURI, IdStack,
+  { Vcl.Graphics por ultimo: Winapi.Windows declara um TBitmap proprio
+    (tagBITMAP) e a unit listada depois vence na resolucao do nome. }
+  Vcl.Graphics;
 
 type
   TAppDbCellArray = array[0..(MaxInt div SizeOf(MarshaledAString) - 1)] of MarshaledAString;
@@ -1693,16 +1716,18 @@ end;
 
 procedure ExportPS4SavesDecrypted(const AHost: string; APort: Word;
   const ASaves: TArray<TPS4SaveGame>; const ADestFolder: string;
-  ALog: TPS4SaveAgentLogEvent);
+  ALog: TPS4SaveAgentLogEvent; AProgress: TPS4SaveAgentProgressEvent);
 var
   Save: TPS4SaveGame;
   GameDir, SaveDir, ArchiveFile: string;
+  I: Integer;
 begin
   if Length(ASaves) = 0 then
     Exit;
   EnsurePS4SaveAgentReady(AHost, ALog);
-  for Save in ASaves do
+  for I := 0 to High(ASaves) do
   begin
+    Save := ASaves[I];
     GameDir := TPath.Combine(ADestFolder,
       BackupSafeFolderName(Save.Title + ' [' + Save.TitleID + ']'));
     SaveDir := TPath.Combine(GameDir, BackupSafeFolderName(Save.SaveName));
@@ -1711,6 +1736,10 @@ begin
       BackupSafeFolderName(Save.UserID + '_' +
         FormatDateTime('yyyymmdd_hhnnss', Now)) + '.ps4sav');
     DownloadDecryptedSave(AHost, Save, ArchiveFile, ALog, nil);
+    if Assigned(AProgress) then
+      AProgress(Format('Save %d de %d concluido: %s / %s',
+        [I + 1, Length(ASaves), Save.TitleID, Save.SaveName]),
+        I + 1, Length(ASaves));
   end;
 end;
 
@@ -1893,7 +1922,7 @@ const
   PS4_SAVE_AGENT_FILE = 'ps4-save-agent.elf';
   PS4_SAVE_AGENT_REMOTE_DIR = '/data/payloads';
   PS4_SAVE_AGENT_PING = 'PS4SAVEAGENT';
-  PS4_SAVE_AGENT_MIN_VERSION = 'PS4SAVEAGENT 0.6';
+  PS4_SAVE_AGENT_MIN_VERSION = 'PS4SAVEAGENT 2.7';
   PS4_BINLOADER_PORTS: array[0..2] of Word = (9090, 9021, 9020);
 
 type
@@ -2161,8 +2190,8 @@ begin
   //Result := False;
   HTTP := TIdHTTP.Create(nil);
   try
-    HTTP.ConnectTimeout := 1500;
-    HTTP.ReadTimeout := 2500;
+    HTTP.ConnectTimeout := 3000;
+    HTTP.ReadTimeout := 5000;
     try
       S := HTTP.Get(AgentBaseURL(AHost) + '/api/ping');
       Result := Pos(PS4_SAVE_AGENT_PING, UpperCase(S)) > 0;
@@ -2177,22 +2206,30 @@ end;
 function TryGetAgentVersion(const AHost: string; out AVersion: string): Boolean;
 var
   HTTP: TIdHTTP;
+  Attempt: Integer;
 begin
-  //Result := False;
   AVersion := '';
-  HTTP := TIdHTTP.Create(nil);
-  try
-    HTTP.ConnectTimeout := 1500;
-    HTTP.ReadTimeout := 2500;
+  Result := False;
+  for Attempt := 1 to 3 do
+  begin
+    HTTP := TIdHTTP.Create(nil);
     try
-      AVersion := Trim(HTTP.Get(AgentBaseURL(AHost) + '/api/version'));
-      Result := Pos(PS4_SAVE_AGENT_MIN_VERSION, UpperCase(AVersion)) > 0;
-    except
-      AVersion := '';
-      Result := False;
+      HTTP.ConnectTimeout := 3000;
+      HTTP.ReadTimeout := 5000;
+      try
+        AVersion := Trim(HTTP.Get(AgentBaseURL(AHost) + '/api/version'));
+        Result := Pos(PS4_SAVE_AGENT_MIN_VERSION, UpperCase(AVersion)) > 0;
+      except
+        AVersion := '';
+        Result := False;
+      end;
+    finally
+      HTTP.Free;
     end;
-  finally
-    HTTP.Free;
+    if Result then
+      Exit;
+    if Attempt < 3 then
+      Sleep(600);
   end;
 end;
 
@@ -2294,17 +2331,25 @@ begin
     Exit;
   end;
 
+  { /api/version is the authoritative probe.  A transient /api/ping timeout
+    must not cause FTP/BinLoader to start a second process. }
+  if TryGetAgentVersion(AHost, AgentVersion) then
+  begin
+    Log(ALog, 'PS4 Save Agent ja esta em execucao em ' + AHost + ': ' + AgentVersion);
+    Exit;
+  end;
+
   Log(ALog, 'PS4 Save Agent nao respondeu; verificando se o ELF existe no PS4...');
   EnsurePS4SaveAgentInstalled(AHost, ALog);
 
-  if WaitForAgentReady(AHost, 4, ALog) then
+  if WaitForAgentReady(AHost, 3, ALog) then
   begin
     Log(ALog, 'PS4 Save Agent respondeu em ' + AHost + '.');
     Exit;
   end;
 
   Log(ALog, 'PS4 Save Agent nao esta em execucao; tentando iniciar pelo BinLoader do GoldHEN...');
-  for Attempt := 1 to 2 do
+  for Attempt := 1 to 1 do
   begin
     if Attempt > 1 then
     begin
@@ -2312,7 +2357,7 @@ begin
       Sleep(1500);
     end;
 
-    if TrySendAgentToBinLoader(AHost, ALog) and WaitForAgentReady(AHost, 8, ALog) then
+    if TrySendAgentToBinLoader(AHost, ALog) and WaitForAgentReady(AHost, 15, ALog) then
     begin
       Log(ALog, 'PS4 Save Agent iniciado automaticamente em ' + AHost + '.');
       Exit;
@@ -2393,7 +2438,7 @@ begin
   HTTP := TIdHTTP.Create(nil);
   try
     HTTP.ConnectTimeout := 1500;
-    HTTP.ReadTimeout := 2500;
+    HTTP.ReadTimeout := 8000;
     try
       HTTP.Get(AgentBaseURL(AHost) + '/api/shutdown');
       Log(ALog, 'PS4 Save Agent finalizado em ' + AHost + '.');
@@ -2412,60 +2457,34 @@ var
   AgentVersion: string;
   Attempt: Integer;
 begin
-  if TryPingAgent(AHost) then
-  begin
-    if TryGetAgentVersion(AHost, AgentVersion) then
-    begin
-      Log(ALog, 'PS4 Save Agent versao atual em ' + AHost + ': ' + AgentVersion);
-      Exit;
-    end;
-    Log(ALog, 'PS4 Save Agent antigo em execucao em ' + AHost +
-      '; atualizando pelo BinLoader...');
-  end
-  else
-  begin
-    Log(ALog, 'PS4 Save Agent nao esta respondendo em ' + AHost +
-      '; iniciando para verificar a versao...');
-    EnsurePS4SaveAgentReady(AHost, ALog);
-    if TryGetAgentVersion(AHost, AgentVersion) then
-    begin
-      Log(ALog, 'PS4 Save Agent versao atual em ' + AHost + ': ' + AgentVersion);
-      Exit;
-    end;
-  end;
+  { Ao conectar, sempre sincroniza o ELF local com o PS4. Isso elimina a
+    ambiguidade entre o arquivo remoto e o processo antigo na RAM. }
+  Log(ALog, 'Enviando PS4 Save Agent para ' + PS4SaveAgentRemotePath +
+    ' (atualizacao forcada)...');
+  EnsureAgentUploaded(AHost, ALog, True);
 
+  { O processo anterior precisa liberar a porta 8084 antes do BinLoader. }
   ShutdownPS4SaveAgent(AHost, ALog);
-  for Attempt := 1 to 20 do
+  for Attempt := 1 to 12 do
   begin
-    Sleep(250);
+    Sleep(150);
     if not TryPingAgent(AHost) then
       Break;
-    if Attempt = 20 then
+    if Attempt = 12 then
       raise Exception.Create('O PS4 Save Agent antigo ainda esta ocupando a porta 8084 em ' + AHost + '.');
   end;
-  for Attempt := 1 to 3 do
-  begin
-    { Sempre substitui o ELF remoto quando a versao em execucao esta antiga. }
-    EnsureAgentUploaded(AHost, ALog, True);
-    if TrySendAgentToBinLoader(AHost, ALog) and
-       WaitForAgentReady(AHost, 8, ALog) and
-       TryGetAgentVersion(AHost, AgentVersion) then
-    begin
-      Log(ALog, 'PS4 Save Agent atualizado e iniciado em ' + AHost +
-        ': ' + AgentVersion);
-      Exit;
-    end;
 
-    if Attempt < 3 then
-    begin
-      Log(ALog, Format('O Agent atualizado nao respondeu corretamente (tentativa %d/3).',
-        [Attempt]));
-      ShutdownPS4SaveAgent(AHost, ALog);
-      Sleep(500);
-    end;
+  Log(ALog, 'Iniciando PS4 Save Agent pelo BinLoader na porta 9090...');
+  if TrySendAgentToBinLoader(AHost, ALog) and
+     WaitForAgentReady(AHost, 8, ALog) and
+     TryGetAgentVersion(AHost, AgentVersion) then
+  begin
+    Log(ALog, 'PS4 Save Agent atualizado e iniciado em ' + AHost +
+      ': ' + AgentVersion);
+    Exit;
   end;
 
-  raise Exception.Create('O PS4 Save Agent atualizado nao respondeu em ' + AHost + '.');
+  raise Exception.Create('O PS4 Save Agent foi enviado, mas nao respondeu apos o inicio pelo BinLoader em ' + AHost + '.');
 end;
 
 function EncodeURLValue(const S: string): string;
@@ -2527,7 +2546,7 @@ var
 begin
   Result := False;
   RemoteDir := PS4_USER_ROOT + '/home/' + AUserID + '/savedata/' + ASave.TitleID;
-  for I := 1 to 3 do
+  for I := 1 to 8 do
   begin
     FTP := ConnectFTP(AHost, PS4_FTP_PORT);
     try
@@ -2557,7 +2576,7 @@ begin
 
     if HasImage and HasMeta then
       Exit(True);
-    Sleep(1000);
+    Sleep(1500);
   end;
 end;
 
@@ -2577,7 +2596,7 @@ begin
 
   URL := AgentBaseURL(AHost) + '/api/import_decrypted?user=' +
     EncodeURLValue(ADestUserID) + '&title=' + EncodeURLValue(ASave.TitleID) +
-    '&save=' + EncodeURLValue(ASave.SaveName) + '&Left_user=' +
+    '&save=' + EncodeURLValue(ASave.SaveName) + '&source_user=' +
     EncodeURLValue(ASave.UserID);
 
   Log(ALog, 'Enviando save descriptografado para ' + AHost + ': ' +
@@ -2628,7 +2647,10 @@ begin
             if E.LastError = 10054 then
             begin
               Log(ALog, 'O PS4 Save Agent encerrou a conexao; verificando o save no PS4.');
-              if VerifyImportedSave(AHost, ADestUserID, ASave) then
+              { Agent morto = nada foi importado; pular a verificacao por FTP
+                (~14 s) e ir direto ao reinicio. }
+              if TryPingAgent(AHost) and
+                 VerifyImportedSave(AHost, ADestUserID, ASave) then
               begin
                 Log(ALog, 'Save confirmado no PS4 via FTP.');
                 Exit;
@@ -2697,7 +2719,7 @@ var
   URL: string;
   Response: string;
 begin
-  URL := AgentBaseURL(AHost) + '/api/sync_decrypted?Left_user=' +
+  URL := AgentBaseURL(AHost) + '/api/sync_decrypted?source_user=' +
     EncodeURLValue(ALeftUserID) + '&dest_user=' + EncodeURLValue(ADestUserID) +
     '&title=' + EncodeURLValue(ASave.TitleID) + '&save=' +
     EncodeURLValue(ASave.SaveName);
@@ -2810,15 +2832,79 @@ begin
       Result[I] := '_';
 end;
 
+type
+  { Baixa o save N+1 da origem enquanto o save N e importado no destino.
+    Origem e destino sao consoles diferentes, entao nao ha disputa. }
+  TSaveFetchThread = class(TThread)
+  private
+    FHost: string;
+    FSave: TPS4SaveGame;
+    FZipPath: string;
+    FLog: TPS4SaveAgentLogEvent;
+    FProgress: TPS4SaveAgentProgressEvent;
+  protected
+    procedure Execute; override;
+  public
+    ErrorMessage: string;
+    constructor Create(const AHost: string; const ASave: TPS4SaveGame;
+      const AZipPath: string; ALog: TPS4SaveAgentLogEvent;
+      AProgress: TPS4SaveAgentProgressEvent);
+  end;
+
+constructor TSaveFetchThread.Create(const AHost: string;
+  const ASave: TPS4SaveGame; const AZipPath: string;
+  ALog: TPS4SaveAgentLogEvent; AProgress: TPS4SaveAgentProgressEvent);
+begin
+  inherited Create(False);
+  FreeOnTerminate := False;
+  FHost := AHost;
+  FSave := ASave;
+  FZipPath := AZipPath;
+  FLog := ALog;
+  FProgress := AProgress;
+end;
+
+procedure TSaveFetchThread.Execute;
+begin
+  try
+    DownloadDecryptedSave(FHost, FSave, FZipPath, FLog, FProgress);
+  except
+    on E: Exception do
+      ErrorMessage := E.Message;
+  end;
+end;
+
+procedure WaitFetch(AFetch: TSaveFetchThread);
+var
+  Msg: string;
+begin
+  AFetch.WaitFor;
+  Msg := AFetch.ErrorMessage;
+  AFetch.Free;
+  if Msg <> '' then
+    raise Exception.Create(Msg);
+end;
+
+function BackupZipPathFor(const ABackupRoot: string;
+  const ASave: TPS4SaveGame): string;
+var
+  BackupDir: string;
+begin
+  BackupDir := TPath.Combine(ABackupRoot, SafeFolderName(ASave.TitleID));
+  BackupDir := TPath.Combine(BackupDir, SafeFolderName(ASave.SaveName));
+  ForceDirectories(BackupDir);
+  Result := TPath.Combine(BackupDir, SafeFolderName(ASave.UserID + '_' +
+    FormatDateTime('yyyymmdd_hhnnss', Now)) + '.ps4sav');
+end;
+
 procedure SyncPS4SavesDecrypted(const ALeftHost, ADestHost: string;
   const ALeftUserID, ADestUserID: string; const ASaves: TArray<TPS4SaveGame>;
   const ABackupRoot: string; ALog: TPS4SaveAgentLogEvent;
   AProgress: TPS4SaveAgentProgressEvent);
 var
-  Save: TPS4SaveGame;
-  WorkSave: TPS4SaveGame;
-  BackupDir: string;
-  ZipPath: string;
+  WorkSaves: TArray<TPS4SaveGame>;
+  ZipPaths: TArray<string>;
+  Fetch: TSaveFetchThread;
   I: Integer;
 begin
   if Length(ASaves) = 0 then
@@ -2830,23 +2916,42 @@ begin
   EnsurePS4SaveAgentReady(ADestHost, ALog);
 
   ForceDirectories(ABackupRoot);
+  SetLength(WorkSaves, Length(ASaves));
+  SetLength(ZipPaths, Length(ASaves));
   for I := 0 to High(ASaves) do
   begin
-    Save := ASaves[I];
-    WorkSave := Save;
-    WorkSave.UserID := ALeftUserID;
+    WorkSaves[I] := ASaves[I];
+    WorkSaves[I].UserID := ALeftUserID;
+    ZipPaths[I] := BackupZipPathFor(ABackupRoot, WorkSaves[I]);
+  end;
 
-    BackupDir := TPath.Combine(ABackupRoot, SafeFolderName(WorkSave.TitleID));
-    BackupDir := TPath.Combine(BackupDir, SafeFolderName(WorkSave.SaveName));
-    ForceDirectories(BackupDir);
-    ZipPath := TPath.Combine(BackupDir, SafeFolderName(WorkSave.UserID + '_' +
-      FormatDateTime('yyyymmdd_hhnnss', Now)) + '.ps4sav');
+  if Assigned(AProgress) then
+    AProgress(Format('Save 1 de %d: %s / %s',
+      [Length(ASaves), WorkSaves[0].TitleID, WorkSaves[0].SaveName]), 0, 0);
+  DownloadDecryptedSave(ALeftHost, WorkSaves[0], ZipPaths[0], ALog, AProgress);
 
-    if Assigned(AProgress) then
-      AProgress(Format('Save %d de %d: %s / %s',
-        [I + 1, Length(ASaves), WorkSave.TitleID, WorkSave.SaveName]), 0, 0);
-    DownloadDecryptedSave(ALeftHost, WorkSave, ZipPath, ALog, AProgress);
-    UploadDecryptedSave(ADestHost, ADestUserID, WorkSave, ZipPath, ALog, AProgress);
+  for I := 0 to High(ASaves) do
+  begin
+    Fetch := nil;
+    if I < High(ASaves) then
+      Fetch := TSaveFetchThread.Create(ALeftHost, WorkSaves[I + 1],
+        ZipPaths[I + 1], ALog, nil);
+    try
+      if Assigned(AProgress) then
+        AProgress(Format('Save %d de %d: %s / %s',
+          [I + 1, Length(ASaves), WorkSaves[I].TitleID, WorkSaves[I].SaveName]), 0, 0);
+      UploadDecryptedSave(ADestHost, ADestUserID, WorkSaves[I], ZipPaths[I],
+        ALog, AProgress);
+    except
+      if Fetch <> nil then
+      begin
+        Fetch.WaitFor;
+        Fetch.Free;
+      end;
+      raise;
+    end;
+    if Fetch <> nil then
+      WaitFetch(Fetch);
   end;
 end;
 
@@ -2909,6 +3014,2061 @@ begin
   end;
 end;
 
+{ ------------------------------------------------------------------------- }
+{ Remocao de fundo                                                          }
+{ ------------------------------------------------------------------------- }
+
+const
+  BG_MAX_INPUT_BYTES = 20 * 1024 * 1024;
+  BG_LOCAL_TIMEOUT_MS = 300000;
+  BG_CONNECT_TIMEOUT_MS = 15000;
+  BG_RESPONSE_TIMEOUT_MS = 120000;
+  BG_REMOVEBG_URL = 'https://api.remove.bg/v1.0/removebg';
+  BG_API_KEY_ENV = 'REMOVEBG_API_KEY';
+  BG_SETTINGS_SECTION = 'BackgroundRemoval';
+  BG_DEFAULT_MODEL = 'u2net_human_seg';
+  BG_PNG_SIGNATURE: array[0..7] of Byte = ($89, $50, $4E, $47, $0D, $0A, $1A, $0A);
+
+function BgReadSetting(const AName, ADefault: string): string;
+var
+  Ini: TIniFile;
+begin
+  Ini := TIniFile.Create(TPath.Combine(ExtractFilePath(ParamStr(0)), 'PS4Tools.ini'));
+  try
+    Result := Trim(Ini.ReadString(BG_SETTINGS_SECTION, AName, ADefault));
+  finally
+    Ini.Free;
+  end;
+end;
+
+function BgReadHeader(const AFileName: string; ACount: Integer): TBytes;
+var
+  FS: TFileStream;
+  Count: Integer;
+begin
+  FS := TFileStream.Create(AFileName, fmOpenRead or fmShareDenyNone);
+  try
+    SetLength(Result, ACount);
+    Count := FS.Read(Result[0], ACount);
+    SetLength(Result, Count);
+  finally
+    FS.Free;
+  end;
+end;
+
+function BgIsPngFile(const AFileName: string): Boolean;
+var
+  Header: TBytes;
+begin
+  Result := False;
+  if not TFile.Exists(AFileName) then
+    Exit;
+  Header := BgReadHeader(AFileName, SizeOf(BG_PNG_SIGNATURE));
+  Result := (Length(Header) = SizeOf(BG_PNG_SIGNATURE)) and
+    CompareMem(@BG_PNG_SIGNATURE[0], @Header[0], SizeOf(BG_PNG_SIGNATURE));
+end;
+
+function BgIsJpegFile(const AFileName: string): Boolean;
+var
+  Header: TBytes;
+begin
+  Header := BgReadHeader(AFileName, 3);
+  Result := (Length(Header) = 3) and (Header[0] = $FF) and (Header[1] = $D8) and
+    (Header[2] = $FF);
+end;
+
+{ True somente se o PNG tem pelo menos um pixel nao totalmente opaco. }
+function PngFileHasTransparency(const AFileName: string): Boolean;
+var
+  Png: TPngImage;
+  X, Y: Integer;
+  Alpha: PByteArray;
+begin
+  Result := False;
+  if not BgIsPngFile(AFileName) then
+    Exit;
+  Png := TPngImage.Create;
+  try
+    try
+      Png.LoadFromFile(AFileName);
+    except
+      Exit;
+    end;
+    if Png.Header.ColorType in [COLOR_RGBALPHA, COLOR_GRAYSCALEALPHA] then
+    begin
+      for Y := 0 to Png.Height - 1 do
+      begin
+        Alpha := Png.AlphaScanline[Y];
+        if Alpha = nil then
+          Continue;
+        for X := 0 to Png.Width - 1 do
+          if Alpha^[X] < 255 then
+            Exit(True);
+      end;
+    end
+    else
+      Result := Png.TransparencyMode <> ptmNone;
+  finally
+    Png.Free;
+  end;
+end;
+
+{ Fracao (0..1) de pixels nao totalmente opacos de um PNG com canal alfa; 0 se
+  o arquivo nao for PNG ou nao tiver alfa. Serve para saber se a imagem ja vem
+  transparente e dispensa a remocao de fundo. }
+function PngTransparencyShare(const AFileName: string): Double;
+var
+  Png: TPngImage;
+  X, Y, Count: Integer;
+  Alpha: PByte;
+begin
+  Result := 0;
+  if not BgIsPngFile(AFileName) then
+    Exit;
+  Png := TPngImage.Create;
+  try
+    try
+      Png.LoadFromFile(AFileName);
+    except
+      Exit;
+    end;
+    if not (Png.Header.ColorType in [COLOR_RGBALPHA, COLOR_GRAYSCALEALPHA]) then
+      Exit;
+    if (Png.Width <= 0) or (Png.Height <= 0) then
+      Exit;
+    Count := 0;
+    for Y := 0 to Png.Height - 1 do
+    begin
+      Alpha := PByte(Png.AlphaScanline[Y]);
+      if Alpha = nil then
+        Continue;
+      for X := 0 to Png.Width - 1 do
+        if PByte(NativeUInt(Alpha) + NativeUInt(X))^ < 255 then
+          Inc(Count);
+    end;
+    Result := Count / (Int64(Png.Width) * Png.Height);
+  finally
+    Png.Free;
+  end;
+end;
+
+{ Fracao (0..1) de pixels com alfa >= 128 em um PNG RGBA: quanto da imagem
+  restou depois da remocao de fundo. }
+function BgPngForegroundShare(const AFileName: string): Double;
+var
+  Png: TPngImage;
+  X, Y, Count: Integer;
+  Alpha: PByte;
+begin
+  Result := 1;
+  Png := TPngImage.Create;
+  try
+    try
+      Png.LoadFromFile(AFileName);
+    except
+      Exit;
+    end;
+    if (Png.Width <= 0) or (Png.Height <= 0) then
+      Exit;
+    Count := 0;
+    for Y := 0 to Png.Height - 1 do
+    begin
+      Alpha := PByte(Png.AlphaScanline[Y]);
+      if Alpha = nil then
+      begin
+        Inc(Count, Png.Width);
+        Continue;
+      end;
+      for X := 0 to Png.Width - 1 do
+        if PByte(NativeUInt(Alpha) + NativeUInt(X))^ >= 128 then
+          Inc(Count);
+    end;
+    Result := Count / (Int64(Png.Width) * Png.Height);
+  finally
+    Png.Free;
+  end;
+end;
+
+function BgValidateInput(const AInputFile: string; out AError: string): Boolean;
+var
+  Ext: string;
+begin
+  Result := False;
+  AError := '';
+  if Trim(AInputFile) = '' then
+    AError := 'Nenhuma imagem foi informada.'
+  else if not TFile.Exists(AInputFile) then
+    AError := 'Imagem nao encontrada: ' + AInputFile
+  else
+  begin
+    Ext := LowerCase(ExtractFileExt(AInputFile));
+    if (Ext <> '.jpg') and (Ext <> '.jpeg') and (Ext <> '.png') then
+      AError := 'Formato nao suportado (' + Ext + '). Use JPEG ou PNG.'
+    else if TFile.GetSize(AInputFile) > BG_MAX_INPUT_BYTES then
+      AError := Format('A imagem passa de %d MB.', [BG_MAX_INPUT_BYTES div (1024 * 1024)])
+    else if TFile.GetSize(AInputFile) = 0 then
+      AError := 'A imagem esta vazia.'
+    else if not (BgIsPngFile(AInputFile) or BgIsJpegFile(AInputFile)) then
+      AError := 'O conteudo do arquivo nao e uma imagem JPEG/PNG valida.'
+    else
+      Result := True;
+  end;
+end;
+
+{ Unico lugar onde o rembg.exe e procurado: core\onnx\rembg.exe (ou o caminho
+  de RembgPath em PS4Tools.ini). Se o arquivo nao existir, vale o onnxruntime
+  direto da UnitFunctions. }
+function BgFindRembgExe: string;
+begin
+  Result := BgReadSetting('RembgPath', '');
+  if (Result <> '') and TFile.Exists(Result) then
+    Exit;
+  Result := TPath.Combine(ExtractFilePath(ParamStr(0)), 'core\onnx\rembg.exe');
+  if not TFile.Exists(Result) then
+    Result := '';
+end;
+
+function BgFindApiKey: string;
+begin
+  { A chave nunca fica no codigo: variavel de ambiente ou PS4Tools.ini. }
+  Result := Trim(GetEnvironmentVariable(BG_API_KEY_ENV));
+  if Result = '' then
+    Result := BgReadSetting('ApiKey', '');
+end;
+
+function BgSafeModelName(const AModel: string): string;
+var
+  C: Char;
+begin
+  Result := '';
+  for C in AModel do
+    if CharInSet(C, ['a'..'z', 'A'..'Z', '0'..'9', '_', '-']) then
+      Result := Result + C;
+  if Result = '' then
+    Result := BG_DEFAULT_MODEL;
+end;
+
+function BgReadLogTail(const ALogFile: string): string;
+begin
+  Result := '';
+  try
+    if TFile.Exists(ALogFile) then
+    begin
+      Result := Trim(TFile.ReadAllText(ALogFile, TEncoding.UTF8));
+      if Length(Result) > 600 then
+        Result := Copy(Result, Length(Result) - 599, 600);
+    end;
+  except
+    Result := '';
+  end;
+end;
+
+{ Executa um programa sem janela, grava stdout/stderr em ALogFile e espera ate
+  ATimeoutMs. Se o chamador estiver na thread principal, continua tratando as
+  mensagens para a tela nao congelar. }
+function BgRunProcess(const ACommandLine, ALogFile: string; ATimeoutMs: Cardinal;
+  out AExitCode: Cardinal; out ATimedOut: Boolean): Boolean;
+var
+  Security: TSecurityAttributes;
+  StartInfo: TStartupInfo;
+  ProcInfo: TProcessInformation;
+  LogHandle, NulHandle: THandle;
+  CmdLine: string;
+  StartedAt: UInt64;
+  WaitResult: DWORD;
+begin
+  Result := False;
+  AExitCode := 0;
+  ATimedOut := False;
+
+  FillChar(Security, SizeOf(Security), 0);
+  Security.nLength := SizeOf(Security);
+  Security.bInheritHandle := True;
+
+  LogHandle := CreateFile(PChar(ALogFile), GENERIC_WRITE, FILE_SHARE_READ,
+    @Security, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
+  NulHandle := CreateFile('NUL', GENERIC_READ, FILE_SHARE_READ or FILE_SHARE_WRITE,
+    @Security, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
+  try
+    if (LogHandle = INVALID_HANDLE_VALUE) or (NulHandle = INVALID_HANDLE_VALUE) then
+      Exit;
+
+    FillChar(StartInfo, SizeOf(StartInfo), 0);
+    StartInfo.cb := SizeOf(StartInfo);
+    StartInfo.dwFlags := STARTF_USESHOWWINDOW or STARTF_USESTDHANDLES;
+    StartInfo.wShowWindow := SW_HIDE;
+    StartInfo.hStdInput := NulHandle;
+    StartInfo.hStdOutput := LogHandle;
+    StartInfo.hStdError := LogHandle;
+    FillChar(ProcInfo, SizeOf(ProcInfo), 0);
+
+    CmdLine := ACommandLine;
+    UniqueString(CmdLine);
+    if not CreateProcess(nil, PChar(CmdLine), nil, nil, True, CREATE_NO_WINDOW,
+         nil, nil, StartInfo, ProcInfo) then
+      Exit;
+    try
+      CloseHandle(ProcInfo.hThread);
+      StartedAt := GetTickCount64;
+      repeat
+        WaitResult := WaitForSingleObject(ProcInfo.hProcess, 100);
+        if (WaitResult = WAIT_OBJECT_0) then
+          Break;
+        if GetCurrentThreadId = MainThreadID then
+          Application.ProcessMessages;
+        if GetTickCount64 - StartedAt > ATimeoutMs then
+        begin
+          ATimedOut := True;
+          TerminateProcess(ProcInfo.hProcess, 1);
+          WaitForSingleObject(ProcInfo.hProcess, 5000);
+          Break;
+        end;
+      until False;
+      Result := GetExitCodeProcess(ProcInfo.hProcess, AExitCode);
+    finally
+      CloseHandle(ProcInfo.hProcess);
+    end;
+  finally
+    if LogHandle <> INVALID_HANDLE_VALUE then
+      CloseHandle(LogHandle);
+    if NulHandle <> INVALID_HANDLE_VALUE then
+      CloseHandle(NulHandle);
+  end;
+end;
+
+{ Alternativa A: rembg (U2-Net) local. A primeira execucao baixa o modelo. }
+function BgRemoveWithRembg(const ARembgExe, AInputFile, AOutputTmp: string;
+  out AError: string): Boolean;
+var
+  Model, CmdLine, LogFile, Extra: string;
+  ExitCode: Cardinal;
+  TimedOut: Boolean;
+begin
+  Result := False;
+  AError := '';
+  Model := BgSafeModelName(BgReadSetting('Model', BG_DEFAULT_MODEL));
+  { Alpha matting melhora fios de cabelo, mas exige as dependencias extras do
+    rembg e e bem mais lento; desligado por padrao (AlphaMatting=1 liga). }
+  if BgReadSetting('AlphaMatting', '0') = '1' then
+    Extra := ' -a -ae 15'
+  else
+    Extra := '';
+  CmdLine := '"' + ARembgExe + '" i -m ' + Model + Extra + ' "' + AInputFile +
+    '" "' + AOutputTmp + '"';
+  LogFile := TPath.Combine(TPath.GetTempPath,
+    'ps4tools_rembg_' + IntToStr(GetCurrentProcessId) + '.log');
+  try
+    if not BgRunProcess(CmdLine, LogFile, BG_LOCAL_TIMEOUT_MS, ExitCode, TimedOut) then
+    begin
+      AError := 'Nao foi possivel executar o rembg: ' + ARembgExe;
+      Exit;
+    end;
+    if TimedOut then
+    begin
+      AError := Format('O rembg passou de %d s e foi encerrado. Na primeira execucao ' +
+        'ele baixa o modelo; tente de novo com a internet ligada.',
+        [BG_LOCAL_TIMEOUT_MS div 1000]);
+      Exit;
+    end;
+    if ExitCode <> 0 then
+    begin
+      AError := Format('O rembg terminou com erro (codigo %d). %s',
+        [ExitCode, BgReadLogTail(LogFile)]);
+      Exit;
+    end;
+    Result := True;
+  finally
+    if TFile.Exists(LogFile) then
+      TFile.Delete(LogFile);
+  end;
+end;
+
+{ Alternativa B: API HTTP remove.bg (multipart/form-data). Envia a foto para um
+  servico externo; so e usada se uma chave for configurada de proposito. }
+function BgRemoveWithApi(const AApiKey, AInputFile, AOutputTmp: string;
+  out AError: string): Boolean;
+var
+  Client: THTTPClient;
+  Form: TMultipartFormData;
+  Body: TMemoryStream;
+  Response: IHTTPResponse;
+  Headers: TNetHeaders;
+  Bytes: TBytes;
+  Detail: string;
+begin
+  Result := False;
+  AError := '';
+  Client := THTTPClient.Create;
+  Form := TMultipartFormData.Create;
+  Body := TMemoryStream.Create;
+  try
+    Client.ConnectionTimeout := BG_CONNECT_TIMEOUT_MS;
+    Client.ResponseTimeout := BG_RESPONSE_TIMEOUT_MS;
+    Form.AddFile('image_file', AInputFile);
+    Form.AddField('size', 'auto');
+    Form.AddField('format', 'png');
+    SetLength(Headers, 1);
+    Headers[0] := TNameValuePair.Create('X-Api-Key', AApiKey);
+
+    Response := Client.Post(BG_REMOVEBG_URL, Form, Body, Headers);
+    if Response.StatusCode <> 200 then
+    begin
+      Detail := '';
+      if Body.Size > 0 then
+      begin
+        SetLength(Bytes, Body.Size);
+        Body.Position := 0;
+        Body.ReadBuffer(Bytes[0], Body.Size);
+        Detail := Trim(TEncoding.UTF8.GetString(Bytes));
+        if Length(Detail) > 300 then
+          Detail := Copy(Detail, 1, 300);
+      end;
+      AError := Format('A API de remocao de fundo respondeu HTTP %d. %s',
+        [Response.StatusCode, Detail]);
+      Exit;
+    end;
+    if Body.Size = 0 then
+    begin
+      AError := 'A API de remocao de fundo respondeu sem imagem.';
+      Exit;
+    end;
+    Body.SaveToFile(AOutputTmp);
+    Result := True;
+  finally
+    Body.Free;
+    Form.Free;
+    Client.Free;
+  end;
+end;
+
+{ Alternativa C: o mesmo pipeline do rembg (sessions/u2net_human_seg.py +
+  bg.naive_cutout) executado direto pelo onnxruntime.dll, sem Python e sem
+  rembg.exe:
+    1. imagem -> RGB, reduzida para 320x320;
+    2. valores divididos pelo maior valor da imagem reduzida (nao por 255),
+       depois (v - media) / desvio com media (0.485, 0.456, 0.406) e desvio
+       (0.229, 0.224, 0.225), em formato NCHW float32;
+    3. primeira saida do modelo, canal 0, normalizada por min-max para 0..1;
+    4. a mascara e ampliada ate o tamanho original e vira o canal alfa.
+  Chama a C API do onnxruntime (OrtApi) por indice na tabela de funcoes; os
+  indices abaixo vem de onnxruntime_c_api.h da versao 1.17 (ORT_API_VERSION 17),
+  que e estavel porque a tabela so cresce no fim. O programa e 32 bits, entao a
+  DLL precisa ser a x86. }
+const
+  ORT_API_VERSION_USED = 17;
+  ORT_LOGGING_LEVEL_WARNING = 2;
+  ORT_ENABLE_ALL = 99;
+  ORT_ARENA_ALLOCATOR = 1;
+  ORT_MEM_TYPE_DEFAULT = 0;
+  ORT_TENSOR_FLOAT = 1;
+  ORT_IDX_GET_ERROR_MESSAGE = 2;
+  ORT_IDX_CREATE_ENV = 3;
+  ORT_IDX_CREATE_SESSION = 7;
+  ORT_IDX_RUN = 9;
+  ORT_IDX_CREATE_SESSION_OPTIONS = 10;
+  ORT_IDX_SET_GRAPH_OPTIMIZATION = 23;
+  ORT_IDX_SET_INTRA_OP_THREADS = 24;
+  ORT_IDX_SESSION_GET_INPUT_NAME = 36;
+  ORT_IDX_SESSION_GET_OUTPUT_NAME = 37;
+  ORT_IDX_CREATE_TENSOR_WITH_DATA = 49;
+  ORT_IDX_GET_TENSOR_MUTABLE_DATA = 51;
+  ORT_IDX_GET_DIMENSIONS_COUNT = 61;
+  ORT_IDX_GET_DIMENSIONS = 62;
+  ORT_IDX_GET_TENSOR_TYPE_AND_SHAPE = 65;
+  ORT_IDX_CREATE_CPU_MEMORY_INFO = 69;
+  ORT_IDX_ALLOCATOR_FREE = 76;
+  ORT_IDX_GET_ALLOCATOR = 78;
+  ORT_IDX_RELEASE_ENV = 92;
+  ORT_IDX_RELEASE_STATUS = 93;
+  ORT_IDX_RELEASE_MEMORY_INFO = 94;
+  ORT_IDX_RELEASE_SESSION = 95;
+  ORT_IDX_RELEASE_VALUE = 96;
+  ORT_IDX_RELEASE_TENSOR_TYPE_AND_SHAPE = 99;
+  ORT_IDX_RELEASE_SESSION_OPTIONS = 100;
+  BG_ONNX_INPUT_SIZE = 320;
+  BG_ONNX_DEFAULT_MODEL = 'u2net_human_seg.onnx';
+  BG_ONNX_GENERAL_MODEL = 'u2net.onnx';
+  BG_MIN_FOREGROUND_SHARE = 0.08;
+
+type
+  TOrtGetApiBaseFn = function: Pointer; stdcall;
+  TOrtGetApiFn = function(AVersion: Cardinal): Pointer; stdcall;
+  TOrtGetErrorMessageFn = function(AStatus: Pointer): PAnsiChar; stdcall;
+  TOrtReleaseFn = procedure(AHandle: Pointer); stdcall;
+  TOrtCreateEnvFn = function(ALogLevel: Integer; ALogId: PAnsiChar;
+    out AEnv: Pointer): Pointer; stdcall;
+  TOrtCreateSessionOptionsFn = function(out AOptions: Pointer): Pointer; stdcall;
+  TOrtSetIntFn = function(AOptions: Pointer; AValue: Integer): Pointer; stdcall;
+  TOrtCreateSessionFn = function(AEnv: Pointer; AModelPath: PWideChar;
+    AOptions: Pointer; out ASession: Pointer): Pointer; stdcall;
+  TOrtGetAllocatorFn = function(out AAllocator: Pointer): Pointer; stdcall;
+  TOrtSessionGetNameFn = function(ASession: Pointer; AIndex: NativeUInt;
+    AAllocator: Pointer; out AName: PAnsiChar): Pointer; stdcall;
+  TOrtAllocatorFreeFn = function(AAllocator: Pointer; AMemory: Pointer): Pointer; stdcall;
+  TOrtCreateCpuMemoryInfoFn = function(AAllocType, AMemType: Integer;
+    out AInfo: Pointer): Pointer; stdcall;
+  TOrtCreateTensorFn = function(AInfo: Pointer; AData: Pointer; ADataLen: NativeUInt;
+    AShape: PInt64; AShapeLen: NativeUInt; AElementType: Integer;
+    out AValue: Pointer): Pointer; stdcall;
+  TOrtRunFn = function(ASession: Pointer; ARunOptions: Pointer;
+    AInputNames: PPAnsiChar; AInputs: PPointer; AInputCount: NativeUInt;
+    AOutputNames: PPAnsiChar; AOutputCount: NativeUInt;
+    AOutputs: PPointer): Pointer; stdcall;
+  TOrtGetTensorDataFn = function(AValue: Pointer; out AData: Pointer): Pointer; stdcall;
+  TOrtGetTypeAndShapeFn = function(AValue: Pointer; out AInfo: Pointer): Pointer; stdcall;
+  TOrtGetDimensionsCountFn = function(AInfo: Pointer; out ACount: NativeUInt): Pointer; stdcall;
+  TOrtGetDimensionsFn = function(AInfo: Pointer; ADims: PInt64;
+    ACount: NativeUInt): Pointer; stdcall;
+
+function OrtApiFn(AApi: Pointer; AIndex: Integer): Pointer;
+begin
+  Result := PPointer(NativeUInt(AApi) + NativeUInt(AIndex) * SizeOf(Pointer))^;
+end;
+
+function BgOnnxDir: string;
+begin
+  Result := TPath.Combine(ExtractFilePath(ParamStr(0)), 'core\onnx');
+end;
+
+function BgFindOnnxRuntimeDll: string;
+begin
+  Result := BgReadSetting('OnnxRuntimePath', '');
+  if (Result = '') or not TFile.Exists(Result) then
+    Result := TPath.Combine(BgOnnxDir, 'onnxruntime.dll');
+  if not TFile.Exists(Result) then
+    Result := '';
+end;
+
+{ Rosto: u2net_human_seg (treinado para pessoas). Figuras: se existir, o
+  modelo geral u2net.onnx (objeto de destaque qualquer: personagens,
+  ilustracoes); sem ele usa o de pessoas, que falha em quem nao e humano. }
+function BgFindOnnxModel(AMode: TBgMode): string;
+begin
+  if AMode = bmFigure then
+  begin
+    Result := BgReadSetting('OnnxModelFigure', '');
+    if (Result = '') or not TFile.Exists(Result) then
+      Result := TPath.Combine(BgOnnxDir, BG_ONNX_GENERAL_MODEL);
+    if TFile.Exists(Result) then
+      Exit;
+  end;
+  Result := BgReadSetting('OnnxModelPath', '');
+  if (Result = '') or not TFile.Exists(Result) then
+    Result := TPath.Combine(BgOnnxDir, BG_ONNX_DEFAULT_MODEL);
+  if not TFile.Exists(Result) then
+    Result := '';
+end;
+
+{ Reduz a imagem por media de area para ASize x ASize e monta o tensor NCHW
+  float32 como em BaseSession.normalize do rembg. }
+procedure BgBuildModelInput(ABitmap: TBitmap; ASize: Integer;
+  out AData: TArray<Single>);
+const
+  MEAN: array[0..2] of Single = (0.485, 0.456, 0.406);
+  STD: array[0..2] of Single = (0.229, 0.224, 0.225);
+var
+  Pixels: TArray<Byte>;
+  Acc: TArray<Cardinal>;
+  X0, X1: TArray<Integer>;
+  W, H, DX, DY, SX, SY, Y0, Y1, C, Count: Integer;
+  Line: PByte;
+  MaxValue: Single;
+begin
+  W := ABitmap.Width;
+  H := ABitmap.Height;
+  SetLength(Pixels, ASize * ASize * 3);
+  SetLength(Acc, ASize * 3);
+  SetLength(X0, ASize);
+  SetLength(X1, ASize);
+  for DX := 0 to ASize - 1 do
+  begin
+    X0[DX] := (DX * W) div ASize;
+    X1[DX] := ((DX + 1) * W) div ASize;
+    if X1[DX] <= X0[DX] then
+      X1[DX] := X0[DX] + 1;
+    if X1[DX] > W then
+      X1[DX] := W;
+    if X0[DX] >= X1[DX] then
+      X0[DX] := X1[DX] - 1;
+  end;
+
+  for DY := 0 to ASize - 1 do
+  begin
+    Y0 := (DY * H) div ASize;
+    Y1 := ((DY + 1) * H) div ASize;
+    if Y1 <= Y0 then
+      Y1 := Y0 + 1;
+    if Y1 > H then
+      Y1 := H;
+    if Y0 >= Y1 then
+      Y0 := Y1 - 1;
+    for C := 0 to High(Acc) do
+      Acc[C] := 0;
+    for SY := Y0 to Y1 - 1 do
+    begin
+      Line := ABitmap.ScanLine[SY];
+      for DX := 0 to ASize - 1 do
+        for SX := X0[DX] to X1[DX] - 1 do
+        begin
+          { pf24bit guarda B, G, R }
+          Inc(Acc[DX * 3 + 0], PByte(NativeUInt(Line) + NativeUInt(SX) * 3 + 2)^);
+          Inc(Acc[DX * 3 + 1], PByte(NativeUInt(Line) + NativeUInt(SX) * 3 + 1)^);
+          Inc(Acc[DX * 3 + 2], PByte(NativeUInt(Line) + NativeUInt(SX) * 3 + 0)^);
+        end;
+    end;
+    for DX := 0 to ASize - 1 do
+    begin
+      Count := (Y1 - Y0) * (X1[DX] - X0[DX]);
+      for C := 0 to 2 do
+        Pixels[(DY * ASize + DX) * 3 + C] := Byte((Acc[DX * 3 + C] + Cardinal(Count div 2)) div Cardinal(Count));
+    end;
+  end;
+
+  MaxValue := 0;
+  for C := 0 to High(Pixels) do
+    if Pixels[C] > MaxValue then
+      MaxValue := Pixels[C];
+  if MaxValue < 0.000001 then
+    MaxValue := 0.000001;
+
+  SetLength(AData, 3 * ASize * ASize);
+  for C := 0 to 2 do
+    for DY := 0 to ASize - 1 do
+      for DX := 0 to ASize - 1 do
+        AData[(C * ASize + DY) * ASize + DX] :=
+          (Pixels[(DY * ASize + DX) * 3 + C] / MaxValue - MEAN[C]) / STD[C];
+end;
+
+{ Le o campo Machine do cabecalho PE: $14C = x86, $8664 = x64, 0 = ilegivel. }
+function BgPeMachine(const AFileName: string): Word;
+var
+  Header: TBytes;
+  PeOffset: Integer;
+begin
+  Result := 0;
+  try
+    Header := BgReadHeader(AFileName, 1024);
+    if Length(Header) < $40 then
+      Exit;
+    PeOffset := PInteger(@Header[$3C])^;
+    if (PeOffset < 0) or (PeOffset + 6 > Length(Header)) then
+      Exit;
+    if PCardinal(@Header[PeOffset])^ <> $00004550 then { 'PE'#0#0 }
+      Exit;
+    Result := PWord(@Header[PeOffset + 4])^;
+  except
+    Result := 0;
+  end;
+end;
+
+function BgRemoveWithOnnx(const ADllPath, AModelPath, AInputFile, AOutputTmp: string;
+  out AError: string): Boolean;
+var
+  Lib: HMODULE;
+  GetApiBase: TOrtGetApiBaseFn;
+  ApiBase: Pointer;
+  Api: Pointer;
+  GetErrorMessage: TOrtGetErrorMessageFn;
+  ReleaseStatus, ReleaseEnv, ReleaseOptions, ReleaseSession, ReleaseValue,
+    ReleaseMemInfo, ReleaseShapeInfo: TOrtReleaseFn;
+  Env, Options, Session, Allocator, MemInfo, InputTensor, OutputTensor,
+    ShapeInfo, OutData: Pointer;
+  InputName, OutputName: PAnsiChar;
+  InputNames, OutputNames: array[0..0] of PAnsiChar;
+  Inputs, Outputs: array[0..0] of Pointer;
+  Shape: array[0..3] of Int64;
+  Dims: array[0..7] of Int64;
+  DimCount: NativeUInt;
+  Pic: TPicture;
+  Bmp: TBitmap;
+  Png: TPngImage;
+  Data: TArray<Single>;
+  MaskPtr: PSingle;
+  Mask: TArray<Single>;
+  MaskW, MaskH, MaskCount, I: Integer;
+  MinV, MaxV, V: Single;
+  W, H, X, Y, XA, YA: Integer;
+  FX, FY, WX, WY, V0, V1: Single;
+  ColX0, ColX1: TArray<Integer>;
+  ColW: TArray<Single>;
+  Alpha: PByteArray;
+  Row: PByte;
+  Status: Pointer;
+  Threads: Integer;
+  DllMachine: Word;
+
+  procedure Check(AStatus: Pointer; const AWhat: string);
+  var
+    Msg: string;
+  begin
+    if AStatus = nil then
+      Exit;
+    Msg := string(AnsiString(GetErrorMessage(AStatus)));
+    ReleaseStatus(AStatus);
+    raise Exception.Create('onnxruntime: ' + AWhat + ' falhou: ' + Msg);
+  end;
+
+begin
+  Result := False;
+  AError := '';
+  Lib := 0;
+  GetErrorMessage := nil; ReleaseStatus := nil; ReleaseEnv := nil;
+  ReleaseOptions := nil; ReleaseSession := nil; ReleaseValue := nil;
+  ReleaseMemInfo := nil; ReleaseShapeInfo := nil;
+  Env := nil; Options := nil; Session := nil; MemInfo := nil;
+  InputTensor := nil; OutputTensor := nil; ShapeInfo := nil;
+  InputName := nil; OutputName := nil; Allocator := nil;
+  Pic := nil; Bmp := nil; Png := nil;
+  try
+    try
+      { Erro 193 do LoadLibrary = DLL de outra arquitetura: avisar com clareza. }
+      DllMachine := BgPeMachine(ADllPath);
+{$IFDEF CPUX64}
+      if (DllMachine <> 0) and (DllMachine <> $8664) then
+        raise Exception.Create('A onnxruntime.dll em ' + ADllPath +
+          ' nao e de 64 bits, mas o programa e de 64 bits. Use a DLL x64.');
+{$ELSE}
+      if (DllMachine <> 0) and (DllMachine <> $14C) then
+        raise Exception.Create('A onnxruntime.dll em ' + ADllPath + ' e de ' +
+          IfThen(DllMachine = $8664, '64', 'outra arquitetura de') +
+          ' bits, mas o programa e de 32 bits. Use a DLL x86 (win-x86) ou ' +
+          'compile o programa para Win64.');
+{$ENDIF}
+      Lib := LoadLibraryEx(PChar(ADllPath), 0, LOAD_WITH_ALTERED_SEARCH_PATH);
+      if Lib = 0 then
+        raise Exception.Create('Nao foi possivel carregar ' + ADllPath +
+          ' (erro ' + IntToStr(GetLastError) + '). Falta alguma dependencia, ' +
+          'como o Visual C++ Redistributable?');
+      @GetApiBase := GetProcAddress(Lib, 'OrtGetApiBase');
+      if not Assigned(GetApiBase) then
+        @GetApiBase := GetProcAddress(Lib, '_OrtGetApiBase@0');
+      if not Assigned(GetApiBase) then
+        raise Exception.Create('A DLL nao exporta OrtGetApiBase.');
+      ApiBase := GetApiBase;
+      Api := TOrtGetApiFn(PPointer(ApiBase)^)(ORT_API_VERSION_USED);
+      if Api = nil then
+        raise Exception.Create('A DLL do onnxruntime e mais antiga que a 1.17.');
+
+      GetErrorMessage := TOrtGetErrorMessageFn(OrtApiFn(Api, ORT_IDX_GET_ERROR_MESSAGE));
+      ReleaseStatus := TOrtReleaseFn(OrtApiFn(Api, ORT_IDX_RELEASE_STATUS));
+      ReleaseEnv := TOrtReleaseFn(OrtApiFn(Api, ORT_IDX_RELEASE_ENV));
+      ReleaseOptions := TOrtReleaseFn(OrtApiFn(Api, ORT_IDX_RELEASE_SESSION_OPTIONS));
+      ReleaseSession := TOrtReleaseFn(OrtApiFn(Api, ORT_IDX_RELEASE_SESSION));
+      ReleaseValue := TOrtReleaseFn(OrtApiFn(Api, ORT_IDX_RELEASE_VALUE));
+      ReleaseMemInfo := TOrtReleaseFn(OrtApiFn(Api, ORT_IDX_RELEASE_MEMORY_INFO));
+      ReleaseShapeInfo := TOrtReleaseFn(OrtApiFn(Api, ORT_IDX_RELEASE_TENSOR_TYPE_AND_SHAPE));
+
+      { --- imagem de entrada -> bitmap 24 bits sobre fundo branco --- }
+      Pic := TPicture.Create;
+      Pic.LoadFromFile(AInputFile);
+      if (Pic.Width <= 0) or (Pic.Height <= 0) then
+        raise Exception.Create('Imagem invalida.');
+      Bmp := TBitmap.Create;
+      Bmp.PixelFormat := pf24bit;
+      Bmp.SetSize(Pic.Width, Pic.Height);
+      Bmp.Canvas.Brush.Color := clWhite;
+      Bmp.Canvas.FillRect(Rect(0, 0, Bmp.Width, Bmp.Height));
+      Bmp.Canvas.Draw(0, 0, Pic.Graphic);
+      W := Bmp.Width;
+      H := Bmp.Height;
+      FreeAndNil(Pic);
+
+      BgBuildModelInput(Bmp, BG_ONNX_INPUT_SIZE, Data);
+
+      { --- sessao --- }
+      Check(TOrtCreateEnvFn(OrtApiFn(Api, ORT_IDX_CREATE_ENV))(
+        ORT_LOGGING_LEVEL_WARNING, 'ps4tools', Env), 'CreateEnv');
+      Check(TOrtCreateSessionOptionsFn(OrtApiFn(Api, ORT_IDX_CREATE_SESSION_OPTIONS))(
+        Options), 'CreateSessionOptions');
+      Threads := TThread.ProcessorCount;
+      if Threads > 4 then
+        Threads := 4;
+      if Threads < 1 then
+        Threads := 1;
+      Check(TOrtSetIntFn(OrtApiFn(Api, ORT_IDX_SET_INTRA_OP_THREADS))(
+        Options, Threads), 'SetIntraOpNumThreads');
+      Check(TOrtSetIntFn(OrtApiFn(Api, ORT_IDX_SET_GRAPH_OPTIMIZATION))(
+        Options, ORT_ENABLE_ALL), 'SetSessionGraphOptimizationLevel');
+      Check(TOrtCreateSessionFn(OrtApiFn(Api, ORT_IDX_CREATE_SESSION))(
+        Env, PWideChar(AModelPath), Options, Session), 'CreateSession (modelo)');
+
+      Check(TOrtGetAllocatorFn(OrtApiFn(Api, ORT_IDX_GET_ALLOCATOR))(Allocator),
+        'GetAllocatorWithDefaultOptions');
+      Check(TOrtSessionGetNameFn(OrtApiFn(Api, ORT_IDX_SESSION_GET_INPUT_NAME))(
+        Session, 0, Allocator, InputName), 'SessionGetInputName');
+      Check(TOrtSessionGetNameFn(OrtApiFn(Api, ORT_IDX_SESSION_GET_OUTPUT_NAME))(
+        Session, 0, Allocator, OutputName), 'SessionGetOutputName');
+
+      { --- tensor de entrada e execucao --- }
+      Check(TOrtCreateCpuMemoryInfoFn(OrtApiFn(Api, ORT_IDX_CREATE_CPU_MEMORY_INFO))(
+        ORT_ARENA_ALLOCATOR, ORT_MEM_TYPE_DEFAULT, MemInfo), 'CreateCpuMemoryInfo');
+      Shape[0] := 1;
+      Shape[1] := 3;
+      Shape[2] := BG_ONNX_INPUT_SIZE;
+      Shape[3] := BG_ONNX_INPUT_SIZE;
+      Check(TOrtCreateTensorFn(OrtApiFn(Api, ORT_IDX_CREATE_TENSOR_WITH_DATA))(
+        MemInfo, @Data[0], NativeUInt(Length(Data)) * SizeOf(Single), @Shape[0], 4,
+        ORT_TENSOR_FLOAT, InputTensor), 'CreateTensorWithDataAsOrtValue');
+
+      InputNames[0] := InputName;
+      OutputNames[0] := OutputName;
+      Inputs[0] := InputTensor;
+      Outputs[0] := nil;
+      Check(TOrtRunFn(OrtApiFn(Api, ORT_IDX_RUN))(Session, nil, @InputNames[0],
+        @Inputs[0], 1, @OutputNames[0], 1, @Outputs[0]), 'Run');
+      OutputTensor := Outputs[0];
+      { Os nomes foram alocados pelo alocador do onnxruntime. }
+      Status := TOrtAllocatorFreeFn(OrtApiFn(Api, ORT_IDX_ALLOCATOR_FREE))(
+        Allocator, InputName);
+      if Status <> nil then
+        ReleaseStatus(Status);
+      Status := TOrtAllocatorFreeFn(OrtApiFn(Api, ORT_IDX_ALLOCATOR_FREE))(
+        Allocator, OutputName);
+      if Status <> nil then
+        ReleaseStatus(Status);
+
+      { --- mascara: canal 0 da primeira saida, min-max para 0..1 --- }
+      Check(TOrtGetTypeAndShapeFn(OrtApiFn(Api, ORT_IDX_GET_TENSOR_TYPE_AND_SHAPE))(
+        OutputTensor, ShapeInfo), 'GetTensorTypeAndShape');
+      Check(TOrtGetDimensionsCountFn(OrtApiFn(Api, ORT_IDX_GET_DIMENSIONS_COUNT))(
+        ShapeInfo, DimCount), 'GetDimensionsCount');
+      if (Integer(DimCount) < 2) or (Integer(DimCount) > Length(Dims)) then
+        raise Exception.Create('Formato de saida do modelo inesperado.');
+      Check(TOrtGetDimensionsFn(OrtApiFn(Api, ORT_IDX_GET_DIMENSIONS))(
+        ShapeInfo, @Dims[0], DimCount), 'GetDimensions');
+      MaskH := Integer(Dims[Integer(DimCount) - 2]);
+      MaskW := Integer(Dims[Integer(DimCount) - 1]);
+      if (MaskW <= 1) or (MaskH <= 1) then
+        raise Exception.Create('Mascara de saida invalida.');
+      Check(TOrtGetTensorDataFn(OrtApiFn(Api, ORT_IDX_GET_TENSOR_MUTABLE_DATA))(
+        OutputTensor, OutData), 'GetTensorMutableData');
+      MaskCount := MaskW * MaskH;
+      SetLength(Mask, MaskCount);
+      MaskPtr := PSingle(OutData);
+      MinV := MaskPtr^;
+      MaxV := MinV;
+      for I := 0 to MaskCount - 1 do
+      begin
+        V := PSingle(NativeUInt(MaskPtr) + NativeUInt(I) * SizeOf(Single))^;
+        Mask[I] := V;
+        if V < MinV then MinV := V;
+        if V > MaxV then MaxV := V;
+      end;
+      if MaxV - MinV < 0.0000001 then
+        raise Exception.Create('O modelo nao detectou nenhuma pessoa na imagem.');
+      for I := 0 to MaskCount - 1 do
+        Mask[I] := (Mask[I] - MinV) / (MaxV - MinV);
+
+      { --- PNG RGBA: cores originais + mascara ampliada (bilinear) como alfa --- }
+      SetLength(ColX0, W);
+      SetLength(ColX1, W);
+      SetLength(ColW, W);
+      for X := 0 to W - 1 do
+      begin
+        FX := (X + 0.5) * MaskW / W - 0.5;
+        if FX < 0 then FX := 0;
+        if FX > MaskW - 1 then FX := MaskW - 1;
+        XA := Trunc(FX);
+        if XA > MaskW - 2 then XA := MaskW - 2;
+        ColX0[X] := XA;
+        ColX1[X] := XA + 1;
+        ColW[X] := FX - XA;
+      end;
+      Png := TPngImage.CreateBlank(COLOR_RGBALPHA, 8, W, H);
+      for Y := 0 to H - 1 do
+      begin
+        FY := (Y + 0.5) * MaskH / H - 0.5;
+        if FY < 0 then FY := 0;
+        if FY > MaskH - 1 then FY := MaskH - 1;
+        YA := Trunc(FY);
+        if YA > MaskH - 2 then YA := MaskH - 2;
+        WY := FY - YA;
+        Row := Bmp.ScanLine[Y];
+        Move(Row^, PByte(Png.Scanline[Y])^, W * 3);
+        Alpha := Png.AlphaScanline[Y];
+        for X := 0 to W - 1 do
+        begin
+          WX := ColW[X];
+          V0 := Mask[YA * MaskW + ColX0[X]] * (1 - WX) + Mask[YA * MaskW + ColX1[X]] * WX;
+          V1 := Mask[(YA + 1) * MaskW + ColX0[X]] * (1 - WX) + Mask[(YA + 1) * MaskW + ColX1[X]] * WX;
+          V := V0 * (1 - WY) + V1 * WY;
+          I := Round(V * 255);
+          if I < 0 then I := 0;
+          if I > 255 then I := 255;
+          Alpha^[X] := Byte(I);
+        end;
+      end;
+      Png.SaveToFile(AOutputTmp);
+      Result := True;
+    except
+      on E: Exception do
+      begin
+        Result := False;
+        AError := E.Message;
+      end;
+    end;
+  finally
+    Png.Free;
+    Bmp.Free;
+    Pic.Free;
+    if Lib <> 0 then
+    begin
+      if Assigned(@ReleaseValue) then
+      begin
+        if OutputTensor <> nil then ReleaseValue(OutputTensor);
+        if InputTensor <> nil then ReleaseValue(InputTensor);
+      end;
+      if Assigned(@ReleaseShapeInfo) and (ShapeInfo <> nil) then ReleaseShapeInfo(ShapeInfo);
+      if Assigned(@ReleaseMemInfo) and (MemInfo <> nil) then ReleaseMemInfo(MemInfo);
+      if Assigned(@ReleaseSession) and (Session <> nil) then ReleaseSession(Session);
+      if Assigned(@ReleaseOptions) and (Options <> nil) then ReleaseOptions(Options);
+      if Assigned(@ReleaseEnv) and (Env <> nil) then ReleaseEnv(Env);
+      FreeLibrary(Lib);
+    end;
+  end;
+end;
+
+{ ========================================================================= }
+{ Modo ROSTO HUMANO (chkHumanFace)                                         }
+{ Mesmo modelo u2net_human_seg do onnxruntime, mas com refino da mascara:   }
+{   1. a mascara 320x320 e ampliada para um tamanho de trabalho (<= 1024);  }
+{   2. limpeza: mantem so o(s) maior(es) componente(s) e fecha buracos;     }
+{   3. guided filter (guia = luminancia da foto) cola a borda da mascara nos }
+{      contornos reais da imagem (cabelo, ombros);                          }
+{   4. curva suave no alfa, ampliacao bilinear ate o tamanho original;      }
+{   5. nas bordas, a cor do pixel vem de vizinhos opacos (sem franja do     }
+{      fundo antigo).                                                       }
+{ O modo "figuras" (BgRemoveFlatBackground + cadeia atual) nao e alterado.  }
+{ ========================================================================= }
+
+{ Media em janela (2R+1)^2, normalizada nas bordas, por imagem integral. }
+function BgBoxMean(const ASrc: TArray<Single>; AW, AH, AR: Integer): TArray<Single>;
+var
+  II: TArray<Double>;
+  X, Y, X0, X1, Y0, Y1, Stride: Integer;
+  RowSum, Sum: Double;
+begin
+  Stride := AW + 1;
+  SetLength(II, Stride * (AH + 1));
+  for Y := 0 to AH - 1 do
+  begin
+    RowSum := 0;
+    for X := 0 to AW - 1 do
+    begin
+      RowSum := RowSum + ASrc[Y * AW + X];
+      II[(Y + 1) * Stride + X + 1] := II[Y * Stride + X + 1] + RowSum;
+    end;
+  end;
+  SetLength(Result, AW * AH);
+  for Y := 0 to AH - 1 do
+  begin
+    Y0 := Y - AR;
+    if Y0 < 0 then Y0 := 0;
+    Y1 := Y + AR + 1;
+    if Y1 > AH then Y1 := AH;
+    for X := 0 to AW - 1 do
+    begin
+      X0 := X - AR;
+      if X0 < 0 then X0 := 0;
+      X1 := X + AR + 1;
+      if X1 > AW then X1 := AW;
+      Sum := II[Y1 * Stride + X1] - II[Y0 * Stride + X1] -
+        II[Y1 * Stride + X0] + II[Y0 * Stride + X0];
+      Result[Y * AW + X] := Sum / ((Y1 - Y0) * (X1 - X0));
+    end;
+  end;
+end;
+
+{ Guided filter (He et al.): suaviza AInput seguindo as bordas de AGuide. }
+function BgGuidedFilter(const AGuide, AInput: TArray<Single>; AW, AH, AR: Integer;
+  AEps: Single): TArray<Single>;
+var
+  N, I: Integer;
+  Tmp, MI, MP, MIP, MII, A, B, MA, MB: TArray<Single>;
+  Variance, Covariance: Single;
+begin
+  N := AW * AH;
+  SetLength(Tmp, N);
+  MI := BgBoxMean(AGuide, AW, AH, AR);
+  MP := BgBoxMean(AInput, AW, AH, AR);
+  for I := 0 to N - 1 do
+    Tmp[I] := AGuide[I] * AInput[I];
+  MIP := BgBoxMean(Tmp, AW, AH, AR);
+  for I := 0 to N - 1 do
+    Tmp[I] := AGuide[I] * AGuide[I];
+  MII := BgBoxMean(Tmp, AW, AH, AR);
+  SetLength(A, N);
+  SetLength(B, N);
+  for I := 0 to N - 1 do
+  begin
+    Variance := MII[I] - MI[I] * MI[I];
+    Covariance := MIP[I] - MI[I] * MP[I];
+    A[I] := Covariance / (Variance + AEps);
+    B[I] := MP[I] - A[I] * MI[I];
+  end;
+  MA := BgBoxMean(A, AW, AH, AR);
+  MB := BgBoxMean(B, AW, AH, AR);
+  SetLength(Result, N);
+  for I := 0 to N - 1 do
+  begin
+    Result[I] := MA[I] * AGuide[I] + MB[I];
+    if Result[I] < 0 then Result[I] := 0;
+    if Result[I] > 1 then Result[I] := 1;
+  end;
+end;
+
+{ Remove manchas soltas (componentes < 15% do maior) e fecha buracos pequenos
+  de fundo cercados pela pessoa (< 0,3% da imagem). }
+procedure BgCleanupMask(var A: TArray<Single>; AW, AH: Integer);
+var
+  N, I, K, Largest, Border: Integer;
+  Lab, Sizes, Stack: TArray<Integer>;
+  TouchesBorder: TArray<Boolean>;
+
+  procedure LabelMask(AInverse: Boolean);
+  var
+    P, Q, Cur, Count, SP, QX, QY: Integer;
+  begin
+    SetLength(Lab, 0);
+    SetLength(Lab, N);
+    SetLength(Sizes, 1);
+    for P := 0 to N - 1 do
+    begin
+      if (Lab[P] <> 0) or ((A[P] >= 0.5) = AInverse) then
+        Continue;
+      Cur := Length(Sizes);
+      SetLength(Sizes, Cur + 1);
+      Count := 0;
+      SP := 0;
+      Stack[SP] := P;
+      Inc(SP);
+      Lab[P] := Cur;
+      while SP > 0 do
+      begin
+        Dec(SP);
+        Q := Stack[SP];
+        Inc(Count);
+        QY := Q div AW;
+        QX := Q - QY * AW;
+        if (QX > 0) and (Lab[Q - 1] = 0) and ((A[Q - 1] >= 0.5) <> AInverse) then
+        begin
+          Lab[Q - 1] := Cur; Stack[SP] := Q - 1; Inc(SP);
+        end;
+        if (QX < AW - 1) and (Lab[Q + 1] = 0) and ((A[Q + 1] >= 0.5) <> AInverse) then
+        begin
+          Lab[Q + 1] := Cur; Stack[SP] := Q + 1; Inc(SP);
+        end;
+        if (QY > 0) and (Lab[Q - AW] = 0) and ((A[Q - AW] >= 0.5) <> AInverse) then
+        begin
+          Lab[Q - AW] := Cur; Stack[SP] := Q - AW; Inc(SP);
+        end;
+        if (QY < AH - 1) and (Lab[Q + AW] = 0) and ((A[Q + AW] >= 0.5) <> AInverse) then
+        begin
+          Lab[Q + AW] := Cur; Stack[SP] := Q + AW; Inc(SP);
+        end;
+      end;
+      Sizes[Cur] := Count;
+    end;
+  end;
+
+begin
+  N := AW * AH;
+  SetLength(Stack, N);
+
+  { manchas soltas }
+  LabelMask(False);
+  Largest := 0;
+  for K := 1 to High(Sizes) do
+    if Sizes[K] > Largest then
+      Largest := Sizes[K];
+  if Largest > 0 then
+    for I := 0 to N - 1 do
+      if (Lab[I] > 0) and (Sizes[Lab[I]] < 0.15 * Largest) then
+        A[I] := 0;
+
+  { buracos pequenos que nao tocam a borda }
+  LabelMask(True);
+  SetLength(TouchesBorder, Length(Sizes));
+  for I := 0 to AW - 1 do
+  begin
+    Border := Lab[I];
+    TouchesBorder[Border] := True;
+    Border := Lab[(AH - 1) * AW + I];
+    TouchesBorder[Border] := True;
+  end;
+  for I := 0 to AH - 1 do
+  begin
+    Border := Lab[I * AW];
+    TouchesBorder[Border] := True;
+    Border := Lab[I * AW + AW - 1];
+    TouchesBorder[Border] := True;
+  end;
+  for I := 0 to N - 1 do
+    if (Lab[I] > 0) and (not TouchesBorder[Lab[I]]) and
+       (Sizes[Lab[I]] < 0.003 * N) then
+      A[I] := 1;
+end;
+
+{ Executa o modelo e devolve a mascara (canal 0 da primeira saida) normalizada
+  por min-max para 0..1, no tamanho nativo da saida (320x320). }
+function BgOnnxMask(const ADllPath, AModelPath: string; ABitmap: TBitmap;
+  out AMask: TArray<Single>; out AMaskW, AMaskH: Integer;
+  out AError: string): Boolean;
+var
+  Lib: HMODULE;
+  GetApiBase: TOrtGetApiBaseFn;
+  ApiBase, Api: Pointer;
+  GetErrorMessage: TOrtGetErrorMessageFn;
+  ReleaseStatus, ReleaseEnv, ReleaseOptions, ReleaseSession, ReleaseValue,
+    ReleaseMemInfo, ReleaseShapeInfo: TOrtReleaseFn;
+  Env, Options, Session, Allocator, MemInfo, InputTensor, OutputTensor,
+    ShapeInfo, OutData, Status: Pointer;
+  InputName, OutputName: PAnsiChar;
+  InputNames, OutputNames: array[0..0] of PAnsiChar;
+  Inputs, Outputs: array[0..0] of Pointer;
+  Shape: array[0..3] of Int64;
+  Dims: array[0..7] of Int64;
+  DimCount: NativeUInt;
+  Data: TArray<Single>;
+  I, MaskCount, Threads: Integer;
+  MinV, MaxV, V: Single;
+  DllMachine: Word;
+
+  procedure Check(AStatus: Pointer; const AWhat: string);
+  var
+    Msg: string;
+  begin
+    if AStatus = nil then
+      Exit;
+    Msg := string(AnsiString(GetErrorMessage(AStatus)));
+    ReleaseStatus(AStatus);
+    raise Exception.Create('onnxruntime: ' + AWhat + ' falhou: ' + Msg);
+  end;
+
+begin
+  Result := False;
+  AError := '';
+  AMaskW := 0;
+  AMaskH := 0;
+  Lib := 0;
+  GetErrorMessage := nil; ReleaseStatus := nil; ReleaseEnv := nil;
+  ReleaseOptions := nil; ReleaseSession := nil; ReleaseValue := nil;
+  ReleaseMemInfo := nil; ReleaseShapeInfo := nil;
+  Env := nil; Options := nil; Session := nil; MemInfo := nil;
+  InputTensor := nil; OutputTensor := nil; ShapeInfo := nil;
+  InputName := nil; OutputName := nil; Allocator := nil;
+  try
+    try
+      DllMachine := BgPeMachine(ADllPath);
+{$IFDEF CPUX64}
+      if (DllMachine <> 0) and (DllMachine <> $8664) then
+        raise Exception.Create('A onnxruntime.dll em ' + ADllPath +
+          ' nao e de 64 bits, mas o programa e de 64 bits. Use a DLL x64.');
+{$ELSE}
+      if (DllMachine <> 0) and (DllMachine <> $14C) then
+        raise Exception.Create('A onnxruntime.dll em ' + ADllPath +
+          ' nao e de 32 bits, mas o programa e de 32 bits. Use a DLL x86.');
+{$ENDIF}
+      Lib := LoadLibraryEx(PChar(ADllPath), 0, LOAD_WITH_ALTERED_SEARCH_PATH);
+      if Lib = 0 then
+        raise Exception.Create('Nao foi possivel carregar ' + ADllPath +
+          ' (erro ' + IntToStr(GetLastError) + ').');
+      @GetApiBase := GetProcAddress(Lib, 'OrtGetApiBase');
+      if not Assigned(GetApiBase) then
+        @GetApiBase := GetProcAddress(Lib, '_OrtGetApiBase@0');
+      if not Assigned(GetApiBase) then
+        raise Exception.Create('A DLL nao exporta OrtGetApiBase.');
+      ApiBase := GetApiBase;
+      Api := TOrtGetApiFn(PPointer(ApiBase)^)(ORT_API_VERSION_USED);
+      if Api = nil then
+        raise Exception.Create('A DLL do onnxruntime e mais antiga que a 1.17.');
+
+      GetErrorMessage := TOrtGetErrorMessageFn(OrtApiFn(Api, ORT_IDX_GET_ERROR_MESSAGE));
+      ReleaseStatus := TOrtReleaseFn(OrtApiFn(Api, ORT_IDX_RELEASE_STATUS));
+      ReleaseEnv := TOrtReleaseFn(OrtApiFn(Api, ORT_IDX_RELEASE_ENV));
+      ReleaseOptions := TOrtReleaseFn(OrtApiFn(Api, ORT_IDX_RELEASE_SESSION_OPTIONS));
+      ReleaseSession := TOrtReleaseFn(OrtApiFn(Api, ORT_IDX_RELEASE_SESSION));
+      ReleaseValue := TOrtReleaseFn(OrtApiFn(Api, ORT_IDX_RELEASE_VALUE));
+      ReleaseMemInfo := TOrtReleaseFn(OrtApiFn(Api, ORT_IDX_RELEASE_MEMORY_INFO));
+      ReleaseShapeInfo := TOrtReleaseFn(OrtApiFn(Api, ORT_IDX_RELEASE_TENSOR_TYPE_AND_SHAPE));
+
+      BgBuildModelInput(ABitmap, BG_ONNX_INPUT_SIZE, Data);
+
+      Check(TOrtCreateEnvFn(OrtApiFn(Api, ORT_IDX_CREATE_ENV))(
+        ORT_LOGGING_LEVEL_WARNING, 'ps4tools', Env), 'CreateEnv');
+      Check(TOrtCreateSessionOptionsFn(OrtApiFn(Api, ORT_IDX_CREATE_SESSION_OPTIONS))(
+        Options), 'CreateSessionOptions');
+      Threads := TThread.ProcessorCount;
+      if Threads > 4 then Threads := 4;
+      if Threads < 1 then Threads := 1;
+      Check(TOrtSetIntFn(OrtApiFn(Api, ORT_IDX_SET_INTRA_OP_THREADS))(
+        Options, Threads), 'SetIntraOpNumThreads');
+      Check(TOrtSetIntFn(OrtApiFn(Api, ORT_IDX_SET_GRAPH_OPTIMIZATION))(
+        Options, ORT_ENABLE_ALL), 'SetSessionGraphOptimizationLevel');
+      Check(TOrtCreateSessionFn(OrtApiFn(Api, ORT_IDX_CREATE_SESSION))(
+        Env, PWideChar(AModelPath), Options, Session), 'CreateSession (modelo)');
+      Check(TOrtGetAllocatorFn(OrtApiFn(Api, ORT_IDX_GET_ALLOCATOR))(Allocator),
+        'GetAllocatorWithDefaultOptions');
+      Check(TOrtSessionGetNameFn(OrtApiFn(Api, ORT_IDX_SESSION_GET_INPUT_NAME))(
+        Session, 0, Allocator, InputName), 'SessionGetInputName');
+      Check(TOrtSessionGetNameFn(OrtApiFn(Api, ORT_IDX_SESSION_GET_OUTPUT_NAME))(
+        Session, 0, Allocator, OutputName), 'SessionGetOutputName');
+
+      Check(TOrtCreateCpuMemoryInfoFn(OrtApiFn(Api, ORT_IDX_CREATE_CPU_MEMORY_INFO))(
+        ORT_ARENA_ALLOCATOR, ORT_MEM_TYPE_DEFAULT, MemInfo), 'CreateCpuMemoryInfo');
+      Shape[0] := 1;
+      Shape[1] := 3;
+      Shape[2] := BG_ONNX_INPUT_SIZE;
+      Shape[3] := BG_ONNX_INPUT_SIZE;
+      Check(TOrtCreateTensorFn(OrtApiFn(Api, ORT_IDX_CREATE_TENSOR_WITH_DATA))(
+        MemInfo, @Data[0], NativeUInt(Length(Data)) * SizeOf(Single), @Shape[0], 4,
+        ORT_TENSOR_FLOAT, InputTensor), 'CreateTensorWithDataAsOrtValue');
+      InputNames[0] := InputName;
+      OutputNames[0] := OutputName;
+      Inputs[0] := InputTensor;
+      Outputs[0] := nil;
+      Check(TOrtRunFn(OrtApiFn(Api, ORT_IDX_RUN))(Session, nil, @InputNames[0],
+        @Inputs[0], 1, @OutputNames[0], 1, @Outputs[0]), 'Run');
+      OutputTensor := Outputs[0];
+      Status := TOrtAllocatorFreeFn(OrtApiFn(Api, ORT_IDX_ALLOCATOR_FREE))(
+        Allocator, InputName);
+      if Status <> nil then ReleaseStatus(Status);
+      Status := TOrtAllocatorFreeFn(OrtApiFn(Api, ORT_IDX_ALLOCATOR_FREE))(
+        Allocator, OutputName);
+      if Status <> nil then ReleaseStatus(Status);
+
+      Check(TOrtGetTypeAndShapeFn(OrtApiFn(Api, ORT_IDX_GET_TENSOR_TYPE_AND_SHAPE))(
+        OutputTensor, ShapeInfo), 'GetTensorTypeAndShape');
+      Check(TOrtGetDimensionsCountFn(OrtApiFn(Api, ORT_IDX_GET_DIMENSIONS_COUNT))(
+        ShapeInfo, DimCount), 'GetDimensionsCount');
+      if (Integer(DimCount) < 2) or (Integer(DimCount) > Length(Dims)) then
+        raise Exception.Create('Formato de saida do modelo inesperado.');
+      Check(TOrtGetDimensionsFn(OrtApiFn(Api, ORT_IDX_GET_DIMENSIONS))(
+        ShapeInfo, @Dims[0], DimCount), 'GetDimensions');
+      AMaskH := Integer(Dims[Integer(DimCount) - 2]);
+      AMaskW := Integer(Dims[Integer(DimCount) - 1]);
+      if (AMaskW <= 1) or (AMaskH <= 1) then
+        raise Exception.Create('Mascara de saida invalida.');
+      Check(TOrtGetTensorDataFn(OrtApiFn(Api, ORT_IDX_GET_TENSOR_MUTABLE_DATA))(
+        OutputTensor, OutData), 'GetTensorMutableData');
+      MaskCount := AMaskW * AMaskH;
+      SetLength(AMask, MaskCount);
+      MinV := PSingle(OutData)^;
+      MaxV := MinV;
+      for I := 0 to MaskCount - 1 do
+      begin
+        V := PSingle(NativeUInt(OutData) + NativeUInt(I) * SizeOf(Single))^;
+        AMask[I] := V;
+        if V < MinV then MinV := V;
+        if V > MaxV then MaxV := V;
+      end;
+      if MaxV - MinV < 0.0000001 then
+        raise Exception.Create('O modelo nao detectou nenhuma pessoa na imagem.');
+      for I := 0 to MaskCount - 1 do
+        AMask[I] := (AMask[I] - MinV) / (MaxV - MinV);
+      Result := True;
+    except
+      on E: Exception do
+      begin
+        Result := False;
+        AError := E.Message;
+      end;
+    end;
+  finally
+    if Lib <> 0 then
+    begin
+      if Assigned(@ReleaseValue) then
+      begin
+        if OutputTensor <> nil then ReleaseValue(OutputTensor);
+        if InputTensor <> nil then ReleaseValue(InputTensor);
+      end;
+      if Assigned(@ReleaseShapeInfo) and (ShapeInfo <> nil) then ReleaseShapeInfo(ShapeInfo);
+      if Assigned(@ReleaseMemInfo) and (MemInfo <> nil) then ReleaseMemInfo(MemInfo);
+      if Assigned(@ReleaseSession) and (Session <> nil) then ReleaseSession(Session);
+      if Assigned(@ReleaseOptions) and (Options <> nil) then ReleaseOptions(Options);
+      if Assigned(@ReleaseEnv) and (Env <> nil) then ReleaseEnv(Env);
+      FreeLibrary(Lib);
+    end;
+  end;
+end;
+
+function BgRemoveHumanFace(const ADllPath, AModelPath, AInputFile, AOutputTmp: string;
+  out AError: string): Boolean;
+const
+  WORK_MAX = 1024;
+  MAX_PIXELS = 16000000;
+var
+  Pic: TPicture;
+  Bmp: TBitmap;
+  Png: TPngImage;
+  W, H, WW, WH, X, Y, I, X0, X1, Y0, Y1, SX, SY, MaskW, MaskH, Radius,
+    XA, YA, Cnt, Reach, DX, DY, NX, NY, SumB, SumG, SumR, Value: Integer;
+  Scale, FX, FY, WtX, WtY, V0, V1, T, Q: Single;
+  Mask, Guide, Alpha, Refined: TArray<Single>;
+  Acc: TArray<Cardinal>;
+  ColX0, ColX1: TArray<Integer>;
+  ColW: TArray<Single>;
+  Line: PByte;
+  RowPtrs, AlphaPtrs: TArray<PByte>;
+  P: PByte;
+  Gray: Single;
+  Err: string;
+begin
+  Result := False;
+  AError := '';
+  Pic := TPicture.Create;
+  Bmp := TBitmap.Create;
+  Png := nil;
+  try
+    try
+      Pic.LoadFromFile(AInputFile);
+      W := Pic.Width;
+      H := Pic.Height;
+      if (W < 16) or (H < 16) then
+        raise Exception.Create('Imagem muito pequena.');
+      if Int64(W) * H > MAX_PIXELS then
+        raise Exception.Create('Imagem grande demais para o modo rosto (limite de 16 megapixels).');
+      Bmp.PixelFormat := pf24bit;
+      Bmp.SetSize(W, H);
+      Bmp.Canvas.Brush.Color := clWhite;
+      Bmp.Canvas.FillRect(Rect(0, 0, W, H));
+      Bmp.Canvas.Draw(0, 0, Pic.Graphic);
+      FreeAndNil(Pic);
+
+      { --- 1. mascara bruta do modelo --- }
+      if not BgOnnxMask(ADllPath, AModelPath, Bmp, Mask, MaskW, MaskH, Err) then
+        raise Exception.Create(Err);
+
+      { --- 2. tamanho de trabalho e guia (luminancia por media de area) --- }
+      Scale := 1;
+      if W > H then
+      begin
+        if W > WORK_MAX then Scale := WORK_MAX / W;
+      end
+      else if H > WORK_MAX then
+        Scale := WORK_MAX / H;
+      WW := Round(W * Scale);
+      WH := Round(H * Scale);
+      if WW < 8 then WW := 8;
+      if WH < 8 then WH := 8;
+
+      SetLength(Guide, WW * WH);
+      SetLength(Acc, WW * 3);
+      for Y := 0 to WH - 1 do
+      begin
+        Y0 := (Y * H) div WH;
+        Y1 := ((Y + 1) * H) div WH;
+        if Y1 <= Y0 then Y1 := Y0 + 1;
+        if Y1 > H then Y1 := H;
+        for I := 0 to High(Acc) do
+          Acc[I] := 0;
+        for SY := Y0 to Y1 - 1 do
+        begin
+          Line := Bmp.ScanLine[SY];
+          for X := 0 to WW - 1 do
+          begin
+            X0 := (X * W) div WW;
+            X1 := ((X + 1) * W) div WW;
+            if X1 <= X0 then X1 := X0 + 1;
+            if X1 > W then X1 := W;
+            for SX := X0 to X1 - 1 do
+            begin
+              { pf24bit guarda B, G, R }
+              Inc(Acc[X * 3], PByte(NativeUInt(Line) + NativeUInt(SX) * 3 + 2)^);
+              Inc(Acc[X * 3 + 1], PByte(NativeUInt(Line) + NativeUInt(SX) * 3 + 1)^);
+              Inc(Acc[X * 3 + 2], PByte(NativeUInt(Line) + NativeUInt(SX) * 3)^);
+            end;
+          end;
+        end;
+        for X := 0 to WW - 1 do
+        begin
+          X0 := (X * W) div WW;
+          X1 := ((X + 1) * W) div WW;
+          if X1 <= X0 then X1 := X0 + 1;
+          if X1 > W then X1 := W;
+          Cnt := (Y1 - Y0) * (X1 - X0);
+          Gray := (0.299 * Acc[X * 3] + 0.587 * Acc[X * 3 + 1] +
+            0.114 * Acc[X * 3 + 2]) / (255.0 * Cnt);
+          Guide[Y * WW + X] := Gray;
+        end;
+      end;
+
+      { --- 3. mascara ampliada (bilinear) ate o tamanho de trabalho --- }
+      SetLength(ColX0, WW);
+      SetLength(ColX1, WW);
+      SetLength(ColW, WW);
+      for X := 0 to WW - 1 do
+      begin
+        FX := (X + 0.5) * MaskW / WW - 0.5;
+        if FX < 0 then FX := 0;
+        if FX > MaskW - 1 then FX := MaskW - 1;
+        XA := Trunc(FX);
+        if XA > MaskW - 2 then XA := MaskW - 2;
+        ColX0[X] := XA;
+        ColX1[X] := XA + 1;
+        ColW[X] := FX - XA;
+      end;
+      SetLength(Alpha, WW * WH);
+      for Y := 0 to WH - 1 do
+      begin
+        FY := (Y + 0.5) * MaskH / WH - 0.5;
+        if FY < 0 then FY := 0;
+        if FY > MaskH - 1 then FY := MaskH - 1;
+        YA := Trunc(FY);
+        if YA > MaskH - 2 then YA := MaskH - 2;
+        WtY := FY - YA;
+        for X := 0 to WW - 1 do
+        begin
+          WtX := ColW[X];
+          V0 := Mask[YA * MaskW + ColX0[X]] * (1 - WtX) + Mask[YA * MaskW + ColX1[X]] * WtX;
+          V1 := Mask[(YA + 1) * MaskW + ColX0[X]] * (1 - WtX) + Mask[(YA + 1) * MaskW + ColX1[X]] * WtX;
+          Alpha[Y * WW + X] := V0 * (1 - WtY) + V1 * WtY;
+        end;
+      end;
+      Mask := nil;
+
+      { --- 4. limpeza + guided filter + curva --- }
+      BgCleanupMask(Alpha, WW, WH);
+      if WW > WH then Radius := Round(WW * 0.01) else Radius := Round(WH * 0.01);
+      if Radius < 4 then Radius := 4;
+      Refined := BgGuidedFilter(Guide, Alpha, WW, WH, Radius, 0.0001);
+      for I := 0 to High(Refined) do
+      begin
+        T := (Refined[I] - 0.08) / 0.84;
+        if T < 0 then T := 0;
+        if T > 1 then T := 1;
+        Refined[I] := T * T * (3 - 2 * T);
+      end;
+      Alpha := nil;
+      Guide := nil;
+
+      { --- 5. PNG RGBA no tamanho original --- }
+      SetLength(ColX0, W);
+      SetLength(ColX1, W);
+      SetLength(ColW, W);
+      for X := 0 to W - 1 do
+      begin
+        FX := (X + 0.5) * WW / W - 0.5;
+        if FX < 0 then FX := 0;
+        if FX > WW - 1 then FX := WW - 1;
+        XA := Trunc(FX);
+        if XA > WW - 2 then XA := WW - 2;
+        ColX0[X] := XA;
+        ColX1[X] := XA + 1;
+        ColW[X] := FX - XA;
+      end;
+      Png := TPngImage.CreateBlank(COLOR_RGBALPHA, 8, W, H);
+      SetLength(RowPtrs, H);
+      SetLength(AlphaPtrs, H);
+      for Y := 0 to H - 1 do
+      begin
+        RowPtrs[Y] := PByte(Png.Scanline[Y]);
+        AlphaPtrs[Y] := PByte(Png.AlphaScanline[Y]);
+        FY := (Y + 0.5) * WH / H - 0.5;
+        if FY < 0 then FY := 0;
+        if FY > WH - 1 then FY := WH - 1;
+        YA := Trunc(FY);
+        if YA > WH - 2 then YA := WH - 2;
+        WtY := FY - YA;
+        Move(PByte(Bmp.ScanLine[Y])^, RowPtrs[Y]^, W * 3);
+        for X := 0 to W - 1 do
+        begin
+          WtX := ColW[X];
+          V0 := Refined[YA * WW + ColX0[X]] * (1 - WtX) + Refined[YA * WW + ColX1[X]] * WtX;
+          V1 := Refined[(YA + 1) * WW + ColX0[X]] * (1 - WtX) + Refined[(YA + 1) * WW + ColX1[X]] * WtX;
+          Q := V0 * (1 - WtY) + V1 * WtY;
+          Value := Round(Q * 255);
+          if Value < 0 then Value := 0;
+          if Value > 255 then Value := 255;
+          PByte(NativeUInt(AlphaPtrs[Y]) + NativeUInt(X))^ := Byte(Value);
+        end;
+      end;
+      Refined := nil;
+
+      { --- 6. bordas: cor vinda de vizinhos opacos (sem franja do fundo) --- }
+      Reach := 3;
+      if Scale < 1 then
+        Inc(Reach, Round(1 / Scale));
+      if Reach > 8 then Reach := 8;
+      for Y := 0 to H - 1 do
+        for X := 0 to W - 1 do
+        begin
+          Value := PByte(NativeUInt(AlphaPtrs[Y]) + NativeUInt(X))^;
+          if (Value = 0) or (Value > 250) then
+            Continue;
+          SumB := 0; SumG := 0; SumR := 0; Cnt := 0;
+          for DY := -Reach to Reach do
+          begin
+            NY := Y + DY;
+            if (NY < 0) or (NY >= H) then Continue;
+            for DX := -Reach to Reach do
+            begin
+              NX := X + DX;
+              if (NX < 0) or (NX >= W) then Continue;
+              if PByte(NativeUInt(AlphaPtrs[NY]) + NativeUInt(NX))^ > 250 then
+              begin
+                P := PByte(NativeUInt(RowPtrs[NY]) + NativeUInt(NX) * 3);
+                Inc(SumB, P^);
+                Inc(SumG, PByte(NativeUInt(P) + 1)^);
+                Inc(SumR, PByte(NativeUInt(P) + 2)^);
+                Inc(Cnt);
+              end;
+            end;
+          end;
+          if Cnt > 0 then
+          begin
+            P := PByte(NativeUInt(RowPtrs[Y]) + NativeUInt(X) * 3);
+            P^ := Byte(SumB div Cnt);
+            PByte(NativeUInt(P) + 1)^ := Byte(SumG div Cnt);
+            PByte(NativeUInt(P) + 2)^ := Byte(SumR div Cnt);
+          end;
+        end;
+
+      Png.SaveToFile(AOutputTmp);
+      Result := True;
+    except
+      on E: Exception do
+      begin
+        Result := False;
+        AError := E.Message;
+      end;
+    end;
+  finally
+    Png.Free;
+    Bmp.Free;
+    Pic.Free;
+  end;
+end;
+
+{ Motor para logos e ilustracoes de fundo plano: o fundo e branco/cinza claro
+  ou o xadrez de "transparente" gravado nos proprios pixels (comum em PNGs de
+  bancos de imagens). Modelos de IA de pessoas tratam isso mal (mascara mole,
+  partes brancas viram transparentes); aqui o fundo e achado por preenchimento
+  a partir das bordas, e as bordas ganham alfa suave sem halo:
+    1. cores de fundo = cores claras e neutras que dominam a borda da imagem;
+    2. preenchimento 4-conexo a partir da borda por pixels perto dessas cores
+       (o branco dentro da figura nao e alcancado se houver contorno escuro);
+    3. nos 2 px ao redor do fundo, alfa pela projecao da cor entre a cor do
+       fundo e a cor da figura vizinha, e cor trocada pela da figura (sem halo).
+  AApplicable = False quando a imagem nao parece ter fundo plano; nesse caso
+  o chamador segue para os motores de IA. }
+function BgRemoveFlatBackground(const AInputFile, AOutputTmp: string;
+  out AApplicable: Boolean; out AError: string): Boolean;
+const
+  TOLERANCE = 24;
+  MAX_PIXELS = 8000000;
+  MIN_BORDER_SHARE = 0.01;
+  MIN_BORDER_COVERAGE = 0.90;
+  MIN_REMOVED_SHARE = 0.01;
+  MIN_COLOR_SPREAD_SQ = 24 * 24;
+var
+  Pic: TPicture;
+  Bmp: TBitmap;
+  Png: TPngImage;
+  Counts: TDictionary<Cardinal, Integer>;
+  Pair: TPair<Cardinal, Integer>;
+  BgKeys: TArray<Cardinal>;
+  Pix: TArray<Byte>;
+  Near, State, Dist: TArray<Byte>;
+  Stack: TArray<Integer>;
+  SP, W, H, N, X, Y, I, K, DX, DY, NX, NY, NI, Layer, Total, Covered,
+    Removed, BgCount, Cnt, R, G, B, SR, SG, SB, BR, BG2, BB, FR, FG, FB,
+    PR, PG, PB, Den, Dot, Hi, Lo: Integer;
+  Line: PByte;
+  Alpha: Single;
+  Row, AlphaRow: PByte;
+
+  procedure CountBorder(AX, AY: Integer);
+  var
+    P: Integer;
+    CK: Cardinal;
+    Old: Integer;
+  begin
+    P := (AY * W + AX) * 3;
+    CK := (Cardinal(Pix[P]) shl 16) or (Cardinal(Pix[P + 1]) shl 8) or Cardinal(Pix[P + 2]);
+    if Counts.TryGetValue(CK, Old) then
+      Counts[CK] := Old + 1
+    else
+      Counts.Add(CK, 1);
+    Inc(Total);
+  end;
+
+  procedure Push(AIndex: Integer);
+  begin
+    State[AIndex] := 1;
+    Stack[SP] := AIndex;
+    Inc(SP);
+  end;
+
+begin
+  Result := False;
+  AApplicable := False;
+  AError := '';
+  Pic := TPicture.Create;
+  Bmp := TBitmap.Create;
+  Counts := TDictionary<Cardinal, Integer>.Create;
+  Png := nil;
+  try
+    try
+      Pic.LoadFromFile(AInputFile);
+      W := Pic.Width;
+      H := Pic.Height;
+      if (W < 8) or (H < 8) or (Int64(W) * H > MAX_PIXELS) then
+        Exit;
+      Bmp.PixelFormat := pf24bit;
+      Bmp.SetSize(W, H);
+      Bmp.Canvas.Brush.Color := clWhite;
+      Bmp.Canvas.FillRect(Rect(0, 0, W, H));
+      Bmp.Canvas.Draw(0, 0, Pic.Graphic);
+      FreeAndNil(Pic);
+      N := W * H;
+
+      { pf24bit guarda B, G, R; aqui o vetor fica em R, G, B. }
+      SetLength(Pix, N * 3);
+      for Y := 0 to H - 1 do
+      begin
+        Line := Bmp.ScanLine[Y];
+        for X := 0 to W - 1 do
+        begin
+          I := (Y * W + X) * 3;
+          Pix[I] := PByte(NativeUInt(Line) + NativeUInt(X) * 3 + 2)^;
+          Pix[I + 1] := PByte(NativeUInt(Line) + NativeUInt(X) * 3 + 1)^;
+          Pix[I + 2] := PByte(NativeUInt(Line) + NativeUInt(X) * 3)^;
+        end;
+      end;
+
+      { 1. cores de fundo: claras, neutras e frequentes na borda }
+      Total := 0;
+      for X := 0 to W - 1 do
+      begin
+        CountBorder(X, 0);
+        CountBorder(X, H - 1);
+      end;
+      for Y := 1 to H - 2 do
+      begin
+        CountBorder(0, Y);
+        CountBorder(W - 1, Y);
+      end;
+      SetLength(BgKeys, 0);
+      Covered := 0;
+      for Pair in Counts do
+      begin
+        if Pair.Value < Total * MIN_BORDER_SHARE then
+          Continue;
+        R := (Pair.Key shr 16) and $FF;
+        G := (Pair.Key shr 8) and $FF;
+        B := Pair.Key and $FF;
+        if (R < 170) or (G < 170) or (B < 170) then
+          Continue;
+        Hi := R;
+        if G > Hi then Hi := G;
+        if B > Hi then Hi := B;
+        Lo := R;
+        if G < Lo then Lo := G;
+        if B < Lo then Lo := B;
+        if Hi - Lo > 16 then
+          Continue;
+        SetLength(BgKeys, Length(BgKeys) + 1);
+        BgKeys[High(BgKeys)] := Pair.Key;
+        Inc(Covered, Pair.Value);
+      end;
+      if (Length(BgKeys) = 0) or (Covered < Total * MIN_BORDER_COVERAGE) then
+        Exit;
+
+      { pixels perto de alguma cor de fundo }
+      SetLength(Near, N);
+      for I := 0 to N - 1 do
+      begin
+        R := Pix[I * 3];
+        G := Pix[I * 3 + 1];
+        B := Pix[I * 3 + 2];
+        for K := 0 to High(BgKeys) do
+          if (Abs(R - Integer((BgKeys[K] shr 16) and $FF)) <= TOLERANCE) and
+             (Abs(G - Integer((BgKeys[K] shr 8) and $FF)) <= TOLERANCE) and
+             (Abs(B - Integer(BgKeys[K] and $FF)) <= TOLERANCE) then
+          begin
+            Near[I] := 1;
+            Break;
+          end;
+      end;
+
+      { 2. preenchimento 4-conexo a partir da borda }
+      SetLength(State, N);
+      SetLength(Stack, N);
+      SP := 0;
+      for X := 0 to W - 1 do
+      begin
+        if (Near[X] = 1) and (State[X] = 0) then Push(X);
+        I := (H - 1) * W + X;
+        if (Near[I] = 1) and (State[I] = 0) then Push(I);
+      end;
+      for Y := 0 to H - 1 do
+      begin
+        I := Y * W;
+        if (Near[I] = 1) and (State[I] = 0) then Push(I);
+        I := Y * W + W - 1;
+        if (Near[I] = 1) and (State[I] = 0) then Push(I);
+      end;
+      while SP > 0 do
+      begin
+        Dec(SP);
+        I := Stack[SP];
+        Y := I div W;
+        X := I - Y * W;
+        if (X > 0) and (Near[I - 1] = 1) and (State[I - 1] = 0) then Push(I - 1);
+        if (X < W - 1) and (Near[I + 1] = 1) and (State[I + 1] = 0) then Push(I + 1);
+        if (Y > 0) and (Near[I - W] = 1) and (State[I - W] = 0) then Push(I - W);
+        if (Y < H - 1) and (Near[I + W] = 1) and (State[I + W] = 0) then Push(I + W);
+      end;
+      Stack := nil;
+      Near := nil;
+
+      Removed := 0;
+      for I := 0 to N - 1 do
+        if State[I] = 1 then
+          Inc(Removed);
+      if Removed < N * MIN_REMOVED_SHARE then
+        Exit;
+      AApplicable := True;
+
+      { camadas: 0 fundo, 1 e 2 = banda de borda, 3 interior }
+      SetLength(Dist, N);
+      for I := 0 to N - 1 do
+        if State[I] = 1 then
+          Dist[I] := 0
+        else
+          Dist[I] := 3;
+      for Layer := 1 to 2 do
+        for Y := 0 to H - 1 do
+          for X := 0 to W - 1 do
+          begin
+            I := Y * W + X;
+            if Dist[I] <> 3 then
+              Continue;
+            for DY := -1 to 1 do
+              for DX := -1 to 1 do
+              begin
+                NX := X + DX;
+                NY := Y + DY;
+                if (NX < 0) or (NY < 0) or (NX >= W) or (NY >= H) then
+                  Continue;
+                NI := NY * W + NX;
+                if (Layer = 1) and (State[NI] = 1) then
+                  Dist[I] := Byte(1)
+                else if (Layer = 2) and (Dist[NI] = 1) and (Dist[I] = 3) then
+                  Dist[I] := Byte(2);
+              end;
+          end;
+
+      { cor da figura vizinha (do interior para fora), cor de fundo local e
+        alfa pela projecao. Os pixels de fundo usados vem de Pix, que so e
+        alterado nos pixels da banda, depois de lidos. }
+      for Layer := 2 downto 1 do
+      begin
+        for Y := 0 to H - 1 do
+          for X := 0 to W - 1 do
+          begin
+            I := Y * W + X;
+            if Dist[I] <> Layer then
+              Continue;
+            SR := 0; SG := 0; SB := 0; Cnt := 0;
+            for DY := -1 to 1 do
+              for DX := -1 to 1 do
+              begin
+                if (DX = 0) and (DY = 0) then
+                  Continue;
+                NX := X + DX;
+                NY := Y + DY;
+                if (NX < 0) or (NY < 0) or (NX >= W) or (NY >= H) then
+                  Continue;
+                NI := NY * W + NX;
+                if Dist[NI] > Layer then
+                begin
+                  Inc(SR, Pix[NI * 3]);
+                  Inc(SG, Pix[NI * 3 + 1]);
+                  Inc(SB, Pix[NI * 3 + 2]);
+                  Inc(Cnt);
+                end;
+              end;
+            if Cnt = 0 then
+              Continue;
+            FR := SR div Cnt;
+            FG := SG div Cnt;
+            FB := SB div Cnt;
+
+            { cor de fundo local: media dos pixels de fundo em 5x5 }
+            SR := 0; SG := 0; SB := 0; BgCount := 0;
+            for DY := -2 to 2 do
+              for DX := -2 to 2 do
+              begin
+                NX := X + DX;
+                NY := Y + DY;
+                if (NX < 0) or (NY < 0) or (NX >= W) or (NY >= H) then
+                  Continue;
+                NI := NY * W + NX;
+                if State[NI] = 1 then
+                begin
+                  Inc(SR, Pix[NI * 3]);
+                  Inc(SG, Pix[NI * 3 + 1]);
+                  Inc(SB, Pix[NI * 3 + 2]);
+                  Inc(BgCount);
+                end;
+              end;
+            if BgCount = 0 then
+              Continue;
+            BR := SR div BgCount;
+            BG2 := SG div BgCount;
+            BB := SB div BgCount;
+
+            PR := Pix[I * 3];
+            PG := Pix[I * 3 + 1];
+            PB := Pix[I * 3 + 2];
+            Den := (FR - BR) * (FR - BR) + (FG - BG2) * (FG - BG2) +
+              (FB - BB) * (FB - BB);
+            if Den <= MIN_COLOR_SPREAD_SQ then
+              Continue;
+            Dot := (PR - BR) * (FR - BR) + (PG - BG2) * (FG - BG2) +
+              (PB - BB) * (FB - BB);
+            Alpha := Dot / Den;
+            if Alpha < 0 then Alpha := 0;
+            if Alpha > 1 then Alpha := 1;
+            { State passa a guardar o alfa da banda: 2 + alfa * 253 }
+            Pix[I * 3] := Byte(FR);
+            Pix[I * 3 + 1] := Byte(FG);
+            Pix[I * 3 + 2] := Byte(FB);
+            State[I] := Byte(2 + Round(Alpha * 253));
+          end;
+      end;
+
+      { PNG RGBA: State 1 = transparente; 2..255 = alfa da banda; 0 = opaco }
+      Png := TPngImage.CreateBlank(COLOR_RGBALPHA, 8, W, H);
+      for Y := 0 to H - 1 do
+      begin
+        Row := PByte(Png.Scanline[Y]);
+        AlphaRow := PByte(Png.AlphaScanline[Y]);
+        for X := 0 to W - 1 do
+        begin
+          I := Y * W + X;
+          { o scanline do TPngImage guarda B, G, R }
+          PByte(NativeUInt(Row) + NativeUInt(X) * 3)^ := Pix[I * 3 + 2];
+          PByte(NativeUInt(Row) + NativeUInt(X) * 3 + 1)^ := Pix[I * 3 + 1];
+          PByte(NativeUInt(Row) + NativeUInt(X) * 3 + 2)^ := Pix[I * 3];
+          case State[I] of
+            0: PByte(NativeUInt(AlphaRow) + NativeUInt(X))^ := 255;
+            1: PByte(NativeUInt(AlphaRow) + NativeUInt(X))^ := 0;
+          else
+            PByte(NativeUInt(AlphaRow) + NativeUInt(X))^ :=
+              Byte(Round((State[I] - 2) * 255 / 253));
+          end;
+        end;
+      end;
+      Png.SaveToFile(AOutputTmp);
+      Result := True;
+    except
+      on E: Exception do
+      begin
+        Result := False;
+        AError := E.Message;
+      end;
+    end;
+  finally
+    Png.Free;
+    Counts.Free;
+    Bmp.Free;
+    Pic.Free;
+  end;
+end;
+
+function RemoveImageBackground(const AInputFile, AOutputFile: string;
+  AMode: TBgMode; out AErrorMessage: string): Boolean;
+var
+  OutputDir, TmpFile, RembgExe, ApiKey, StepError, OnnxDll, OnnxModel: string;
+  Done, HasOnnx, FlatApplicable: Boolean;
+  Share: Double;
+begin
+  Result := False;
+  AErrorMessage := '';
+  TmpFile := '';
+  try
+    if not BgValidateInput(AInputFile, AErrorMessage) then
+      Exit;
+    if not SameText(ExtractFileExt(AOutputFile), '.png') then
+    begin
+      AErrorMessage := 'O arquivo de saida precisa ter a extensao .png.';
+      Exit;
+    end;
+    if SameText(TPath.GetFullPath(AInputFile), TPath.GetFullPath(AOutputFile)) then
+    begin
+      AErrorMessage := 'A saida nao pode ser o proprio arquivo de entrada.';
+      Exit;
+    end;
+    OutputDir := ExtractFilePath(TPath.GetFullPath(AOutputFile));
+    if not ForceDirectories(OutputDir) then
+    begin
+      AErrorMessage := 'Nao foi possivel criar a pasta de saida: ' + OutputDir;
+      Exit;
+    end;
+
+    { Gera num arquivo temporario e so substitui a saida se estiver valido. }
+    TmpFile := ChangeFileExt(TPath.GetFullPath(AOutputFile), '') + '.tmp.png';
+    if TFile.Exists(TmpFile) then
+      TFile.Delete(TmpFile);
+
+    { Ordem: core\onnx\rembg.exe -> onnxruntime direto (onnxruntime.dll +
+      modelo em core\onnx) -> API. Se o rembg.exe existir mas falhar, tenta o
+      onnxruntime direto antes de desistir. }
+    RembgExe := BgFindRembgExe;
+    OnnxDll := BgFindOnnxRuntimeDll;
+    OnnxModel := BgFindOnnxModel(AMode);
+    ApiKey := BgFindApiKey;
+    HasOnnx := (OnnxDll <> '') and (OnnxModel <> '');
+    Done := False;
+    StepError := '';
+    FlatApplicable := False;
+    { Logos e ilustracoes de fundo plano ou com xadrez gravado nos pixels:
+      corte classico (nitido, sem IA). Desligue com FlatBackground=0 na secao
+      [BackgroundRemoval] do PS4Tools.ini. Fotos seguem para os motores de IA. }
+    if AMode = bmHumanFace then
+    begin
+      { Foto de rosto: modelo de pessoas com refino da mascara (onnxruntime).
+        Sem a DLL/modelo, cai para o rembg.exe e depois para a API. O motor de
+        fundo plano nao entra aqui. FlatApplicable = True so pula a cadeia
+        de "figuras" abaixo. }
+      FlatApplicable := True;
+      if HasOnnx then
+        Done := BgRemoveHumanFace(OnnxDll, OnnxModel, TPath.GetFullPath(AInputFile),
+          TmpFile, StepError)
+      else if RembgExe <> '' then
+        Done := BgRemoveWithRembg(RembgExe, TPath.GetFullPath(AInputFile), TmpFile, StepError)
+      else if ApiKey <> '' then
+        Done := BgRemoveWithApi(ApiKey, TPath.GetFullPath(AInputFile), TmpFile, StepError)
+      else
+      begin
+        AErrorMessage := 'Nenhum motor de remocao de fundo configurado. Coloque ' +
+          'onnxruntime.dll (x86) e ' + BG_ONNX_DEFAULT_MODEL + ' em core\onnx ' +
+          '(recomendado para rostos), ou rembg.exe, ou defina a variavel de ' +
+          'ambiente ' + BG_API_KEY_ENV + ' para usar a API.';
+        Exit;
+      end;
+    end
+    else if BgReadSetting('FlatBackground', '1') <> '0' then
+      Done := BgRemoveFlatBackground(TPath.GetFullPath(AInputFile), TmpFile,
+        FlatApplicable, StepError);
+    if FlatApplicable then
+    begin
+      { o motor escolhido acima ja decidiu: Done e StepError estao definidos }
+    end
+    else if RembgExe <> '' then
+    begin
+      Done := BgRemoveWithRembg(RembgExe, TPath.GetFullPath(AInputFile), TmpFile, StepError);
+      if (not Done) and HasOnnx then
+      begin
+        if TFile.Exists(TmpFile) then
+          TFile.Delete(TmpFile);
+        Done := BgRemoveWithOnnx(OnnxDll, OnnxModel, TPath.GetFullPath(AInputFile),
+          TmpFile, StepError);
+      end;
+    end
+    else if HasOnnx then
+      Done := BgRemoveWithOnnx(OnnxDll, OnnxModel, TPath.GetFullPath(AInputFile),
+        TmpFile, StepError)
+    else if ApiKey <> '' then
+      Done := BgRemoveWithApi(ApiKey, TPath.GetFullPath(AInputFile), TmpFile, StepError)
+    else
+    begin
+      AErrorMessage := 'Nenhum motor de remocao de fundo configurado. Coloque ' +
+        'rembg.exe, ou onnxruntime.dll (x86) e ' + BG_ONNX_DEFAULT_MODEL +
+        ', em core\onnx; ou defina a variavel de ambiente ' + BG_API_KEY_ENV +
+        ' para usar a API.';
+      Exit;
+    end;
+    if not Done then
+    begin
+      AErrorMessage := StepError;
+      Exit;
+    end;
+
+    if not BgIsPngFile(TmpFile) then
+    begin
+      AErrorMessage := 'A ferramenta nao gerou um PNG valido.';
+      Exit;
+    end;
+    if not PngFileHasTransparency(TmpFile) then
+    begin
+      AErrorMessage := 'O PNG gerado nao tem transparencia; a remocao de fundo falhou.';
+      Exit;
+    end;
+    { Figuras com IA podem "achar" so um pedaco da cena (modelo de pessoas em
+      ilustracao, por exemplo) e apagar quase tudo. Se restou pouco, e melhor
+      avisar do que entregar uma imagem destruida. O motor de fundo plano e o
+      modo Rostos nao passam por esta checagem. }
+    if (AMode = bmFigure) and (not FlatApplicable) then
+    begin
+      { Valido so para Figuras com IA; o caminho de Rostos nao passa por aqui. }
+      Share := BgPngForegroundShare(TmpFile);
+      if Share < BG_MIN_FOREGROUND_SHARE then
+      begin
+        AErrorMessage := Format('A remocao de fundo manteve so %.0f%% da imagem; ' +
+          'provavelmente nao achou o objeto (o modelo e feito para pessoas, ou a ' +
+          'imagem nao tem um fundo para remover). Desmarque "Remover fundo" para ' +
+          'usar a imagem como esta' +
+          '%s', [Share * 100,
+            IfThen((AMode = bmFigure) and
+              (not FileExists(TPath.Combine(BgOnnxDir, BG_ONNX_GENERAL_MODEL))),
+              ', ou coloque o modelo geral ' + BG_ONNX_GENERAL_MODEL + ' em core\onnx.', '.')]);
+        Exit;
+      end;
+    end;
+
+    TFile.Copy(TmpFile, AOutputFile, True);
+    Result := True;
+  except
+    on E: Exception do
+    begin
+      Result := False;
+      AErrorMessage := 'Falha ao remover o fundo: ' + E.Message;
+    end;
+  end;
+  if (TmpFile <> '') and TFile.Exists(TmpFile) then
+    try
+      TFile.Delete(TmpFile);
+    except
+    end;
+end;
+
+function RemoveImageBackground(const AInputFile, AOutputFile: string;
+  out AErrorMessage: string): Boolean;
+begin
+  Result := RemoveImageBackground(AInputFile, AOutputFile, bmFigure, AErrorMessage);
+end;
+
+function RemoveImageBackground(const AInputFile, AOutputFile: string): Boolean;
+var
+  ErrorMessage: string;
+begin
+  Result := RemoveImageBackground(AInputFile, AOutputFile, bmFigure, ErrorMessage);
+end;
+
+function RemoveImageBackgroundBatch(const AInputFiles: TArray<string>;
+  const AOutputDir: string; ALog: TPS4SaveLogEvent): Integer;
+var
+  InputFile, OutputFile, ErrorMessage: string;
+begin
+  Result := 0;
+  for InputFile in AInputFiles do
+  begin
+    OutputFile := TPath.Combine(AOutputDir,
+      TPath.GetFileNameWithoutExtension(InputFile) + '-sem-fundo.png');
+    if RemoveImageBackground(InputFile, OutputFile, ErrorMessage) then
+    begin
+      Inc(Result);
+      if Assigned(ALog) then
+        ALog('Fundo removido: ' + OutputFile);
+    end
+    else if Assigned(ALog) then
+      ALog('Falha em ' + InputFile + ': ' + ErrorMessage);
+  end;
+end;
 
 end.
 
